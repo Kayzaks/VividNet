@@ -1,4 +1,5 @@
 from Attribute import Attribute
+from Utility import Utility
 import numpy
 
 class CapsuleMemory:
