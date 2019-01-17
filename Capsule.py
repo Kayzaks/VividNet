@@ -10,6 +10,10 @@ class Capsule:
         self._routes        : list          = list()  # Route
 
 
+    # TODO: New Route
+    # 1. Inherit Attributes
+    # 2. Create CapsuleRoute
+
     def inheritAttributes(self, fromCapsules : list):
         for route in self._routes:
             for capsule in route.getFromCapsules():

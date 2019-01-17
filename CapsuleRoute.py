@@ -7,35 +7,67 @@ from Utility import Utility
 
 class CapsuleRoute:
 
-    def __init__(self, parentCapsule : Capsule, capsuleRouteName : str):
+    def __init__(self, parentCapsule : Capsule, capsuleRouteName : str, fromCapsules : list):
         self._name                  : str           = capsuleRouteName
         self._memory                : CapsuleMemory = CapsuleMemory()
-        self._neuralNetGamma        : NeuralNet     = NeuralNet(capsuleRouteName + "-gamma")
-        self._neuralNetG            : NeuralNet     = NeuralNet(capsuleRouteName + "-g")
-        self._fromCapsules          : list          = list()                        # Capsules
+        self._fromCapsules          : list          = fromCapsules      # Capsules
         self._parentCapsule         : Capsule       = parentCapsule
 
         self._gFunctionLambda                       = None 
         self._gammaFunctionLambda                   = None
-        self._gInputMapping         : dict          = dict()  # Attribute - Index 
-        self._gOutputMapping        : dict          = dict()  # Index - Attribute
-        self._gammaInputMapping     : dict          = dict()  # Attribute - Index
-        self._gammaOutputMapping    : dict          = dict()  # Index - Attribute
+
+        self._gInputMapping         : dict          = None  # Attribute - Index 
+        self._gOutputMapping        : dict          = None  # Index - Attribute
+        self._gammaInputMapping     : dict          = None  # Attribute - Index
+        self._gammaOutputMapping    : dict          = None  # Index - Attribute
+        self._neuralNetGamma        : NeuralNet     = None
+        self._neuralNetG            : NeuralNet     = None
+
+        self.resizeInternals()
+
 
     def getFromCapsules(self):
         return self._fromCapsules
 
     def getInputAttributes(self):
-        return [x.getAttributes() for x in self._fromCapsules]
+        return [item for sublist in [x.getAttributes() for x in self._fromCapsules] for item in sublist]
         
     def getOutputAttributes(self):
         return self._parentCapsule.getAttributes()
+
+    def getInputActivations(self):
+        # TODO: Output as dict(Capsule, Probability)
+        return {(self._fromCapsules[0], 1.0)}
+
 
     def resizeInternals(self):
         self._memory.inferXAttributes(self.getInputAttributes())
         self._memory.inferYAttributes(self.getOutputAttributes())
 
-        # TODO: Resize Neural Net
+        self._gInputMapping         : dict          = dict()  # Attribute - Index 
+        self._gOutputMapping        : dict          = dict()  # Index - Attribute
+        self._gammaInputMapping     : dict          = dict()  # Attribute - Index
+        self._gammaOutputMapping    : dict          = dict()  # Index - Attribute
+
+        for idx, attribute in enumerate(self.getInputAttributes()):
+            self._gammaInputMapping[attribute] = idx
+            self._gOutputMapping[idx] = attribute
+            
+        for idx, attribute in enumerate(self.getOutputAttributes()):
+            self._gInputMapping[attribute] = idx
+            self._gammaOutputMapping[idx] = attribute
+
+        self._neuralNetGamma        : NeuralNet     = NeuralNet(self._gammaInputMapping, self._gInputMapping, self._name + "-gamma")
+        self._neuralNetG            : NeuralNet     = NeuralNet(self._gInputMapping, self._gammaInputMapping, self._name + "-g")
+
+        self.retrain()
+
+
+
+    def retrain(self):
+        # TODO: IF we got data..
+        return
+
 
     def runGammaFunction(self):
         outputs : dict = dict()    # Attribute - Value
@@ -63,7 +95,11 @@ class CapsuleRoute:
         # Attributes covered by unknown \gamma
         missingOutputs = [x for x in missingOutputs if x not in outputs.keys()]
 
-        # TODO: Run Neural Net on remaining self._neuralNetGamma
+        finalResults = self._neuralNetGamma.runBlock(dict((x, x.getValue()) for x in missingOutputs))
+        for attribute, value in finalResults:
+            if attribute not in outputs:
+                # We are this specific to avoid overriding already calculated attributes
+                outputs[attribute] = value
 
         return outputs
 
