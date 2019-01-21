@@ -12,7 +12,7 @@ class NeuralNet:
         self._outputMapping : dict  = outputMapping                     # Attribute - Index
         self._numInputs     : int   = max(inputMapping.values())  + 1
         self._numOutputs    : int   = max(outputMapping.values()) + 1
-        
+
         # Tensorflow Tensors and Co.
         self._nnX                   = None
         self._nnY                   = None
@@ -74,7 +74,7 @@ class NeuralNet:
 
         learningRate = 0.001 # 0.001
         batchSize =  64 # 64
-        numSteps = 60000 # 60000
+        numSteps = 60000 #60000 # 60000
         
         self.createGraph()
 
@@ -122,10 +122,12 @@ class NeuralNet:
 
 
 
-    def runBlock(self, inputs : dict):
+
+    def forwardPass(self, inputs : dict):
         # inputs        # Attribute  -  Value
 
         if self.hasTraining() == False:
+            print("Can't perform forward pass, as Neural Net has not been trained")
             return {}
 
         tf.reset_default_graph()
@@ -137,5 +139,5 @@ class NeuralNet:
         with tf.Session() as sess:
             saver.restore(sess, "Models/" + self._name + ".ckpt") 
 
-            results = sess.run(self._nnFullTensor , feed_dict ={self._nnX : Utility.mapDataOneWayDictRev(inputs, self._inputMapping), self._nnDropOutRate : 1.0}) 
-            return Utility.mapDataOneWayRev(results, self._outputMapping)        # Attribute - Value
+            results = sess.run(self._nnFullTensor , feed_dict ={self._nnX : [Utility.mapDataOneWayDictRev(inputs, self._inputMapping)], self._nnDropOutRate : 1.0}) 
+            return Utility.mapDataOneWayRev(results[0], self._outputMapping)        # Attribute - Value

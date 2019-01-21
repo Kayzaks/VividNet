@@ -1,4 +1,3 @@
-
 from AttributeType import AttributeType
 
 class Attribute:
@@ -20,5 +19,3 @@ class Attribute:
     def setInherited(self):
         self._isInherited = True
 
-    def destroy(self):
-        return self._type.destroyAttribute(self)

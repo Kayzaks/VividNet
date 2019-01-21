@@ -1,5 +1,4 @@
 from Attribute import Attribute
-from CapsuleRoute import CapsuleRoute
 from Utility import Utility
 import numpy
 
@@ -13,7 +12,7 @@ class CapsuleMemory:
         self._lambdaXMapping    : dict  = dict() # Column Index - Attribute
         self._lambdaYMapping    : dict  = dict() # Column Index - Attribute
         self._lambdaYGenerator          = None   #      -> Rand Y
-        self._lambdaXGenerator          = None   # Y    -> X
+        self._lambdaXInferer            = None   # Y    -> X
         self._lambdaYInferer            = None   # X    -> Y
 
         self._indexInEpoch      : int   = 0
@@ -21,13 +20,17 @@ class CapsuleMemory:
         self._scrambled         : list  = None   # Column Index
 
 
-    def setLambdaKnownG(self, lambdaXGenerator, lambdaYGenerator, xMapping : dict, yMapping : dict):
-        self._lambdaXGenerator = lambdaXGenerator
+    def setLambdaKnownG(self, lambdaYGenerator, lambdaXInferer, yMapping : dict, xMapping : dict):
+        # xMapping  # Column Index - Attribute
+        # yMapping  # Column Index - Attribute
         self._lambdaYGenerator = lambdaYGenerator
+        self._lambdaXInferer = lambdaXInferer
         self._lambdaXMapping = xMapping
         self._lambdaYMapping = yMapping
         
     def setLambdaKnownGamma(self, lambdaYInferer, xMapping : dict, yMapping : dict):
+        # xMapping  # Column Index - Attribute
+        # yMapping  # Column Index - Attribute
         self._lambdaYInferer = lambdaYInferer
         self._lambdaXMapping = xMapping
         self._lambdaYMapping = yMapping
@@ -61,7 +64,7 @@ class CapsuleMemory:
             del self._yMapping[attribute]
             
     
-    def addDataPoint(self, capsuleRoute : CapsuleRoute):
+    def addDataPoint(self, inputAttributes : list, outputAttributes : list, inputActivations : list):
         # Prefill, in case there are attributes missing
         for column in self._xMapping.values():
             column.append(0.0)
@@ -70,13 +73,13 @@ class CapsuleMemory:
 
         self._numEntries = self._numEntries + 1
 
-        for attribute in capsuleRoute.getInputAttributes():
+        for attribute in inputAttributes:
             if attribute in self._xMapping:
                 self._xMapping[attribute][-1] = attribute.getValue()
-        for attribute in capsuleRoute.getOutputAttributes():
+        for attribute in outputAttributes:
             if attribute in self._yMapping:
                 self._yMapping[attribute][-1] = attribute.getValue()
-        for capsule, prob in capsuleRoute.getInputActivations():
+        for capsule, prob in inputActivations:
             if capsule in self._pMapping:
                 self._pMapping[capsule].append(prob)
 
@@ -112,7 +115,7 @@ class CapsuleMemory:
             # Only create Fictive Data
             for idx in range(batchSize):
                 lyData = self._lambdaYGenerator()
-                lxData = self._lambdaXGenerator(lyData)
+                lxData = self._lambdaXInferer(lyData)
                 yData[idx] = Utility.mapData(lyData, self._lambdaYMapping, outputMap)
                 xData[idx] = Utility.mapData(lxData, self._lambdaXMapping, inputMap)
         else:

@@ -28,7 +28,7 @@ class Utility:
     def mapDataOneWayRev(values : list, newMap : dict):
         # newMap        # Object - Index
         outputs : dict = dict()
-        for obj, idx in newMap:
+        for obj, idx in newMap.items():
             outputs[obj] = values[idx]
 
         return outputs  # Object - Value
@@ -39,7 +39,7 @@ class Utility:
         # values        # Object - Value
         # newMap        # Index  - Object
         outputs = [0.0] * len(newMap)
-        for idx, obj in newMap:
+        for idx, obj in newMap.items():
             if obj in values:
                 outputs[idx] = values[obj]
 
@@ -51,7 +51,7 @@ class Utility:
         # values        # Object - Value
         # newMap        # Object - Index
         outputs = [0.0] * len(newMap)
-        for obj, idx in newMap:
+        for obj, idx in newMap.items():
             if obj in values:
                 outputs[idx] = values[obj]
 
