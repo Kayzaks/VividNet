@@ -6,7 +6,7 @@ import numpy
 class GraphicsUserInterface:
 
     def drawArray(self, pixels : list, width : int, height : int):
-        plt.imshow(numpy.reshape(pixels, [width, height]), cmap='gray')
+        plt.imshow(pixels)
         plt.show()
 
         
