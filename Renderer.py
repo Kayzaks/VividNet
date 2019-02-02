@@ -131,37 +131,41 @@ def opU(result, dist1, dist2):
         result[1] = dist2[1]
 
 
-@cuda.jit('void(float64[:], float64[:])', device=True)
-def worldMap(result, position):
-    vec2d1 = cuda.local.array(shape=2, dtype=float64)
-    vec2d2 = cuda.local.array(shape=2, dtype=float64)
+@cuda.jit('void(float64[:], float64[:], float64[:])', device=True)
+def worldMap(result, position, attributes):
     vec3d = cuda.local.array(shape=3, dtype=float64)
 
-    vec2d1[0] = sdPlane(position)
-    vec2d1[1] = 1.0
-
     vec3d[0] = position[0] - 0.0
-    vec3d[1] = position[1] - 0.25
+    vec3d[1] = position[1] - 1.0
     vec3d[2] = position[2] - 0.0
+
+    # Rotation X-Axis
+    TransformTemp = vec3d[0] * attributes[4] - vec3d[1] * attributes[1]
+    vec3d[1] = vec3d[0] * attributes[1] + vec3d[1] * attributes[4]
+    vec3d[0] = TransformTemp
+
+    # Rotation Y-Axis
+    TransformTemp = vec3d[0] * attributes[5] + vec3d[2] * attributes[2]
+    vec3d[2] = -vec3d[0] * attributes[2] + vec3d[2] * attributes[5]
+    vec3d[0] = TransformTemp
     
-    vec2d2[0] = sdSphere(vec3d, 0.25)
-    vec2d2[1] = 2.0
+    # Rotation Z-Axis
+    TransformTemp = vec3d[1] * attributes[6] - vec3d[2] * attributes[3]
+    vec3d[2] = vec3d[1] * attributes[3] + vec3d[2] * attributes[6]
+    vec3d[1] = TransformTemp
 
-    opU(result, vec2d1, vec2d2)
+    if attributes[0] > 0.5:
+        result[0] = sdBox(vec3d, 0.3 * attributes[7], 0.3 * attributes[7], 0.3 * attributes[7])
+    else:
+        result[0] = sdSphere(vec3d, 0.5 * attributes[7])
 
-    vec3d[0] = position[0] - 1.0
-    vec3d[1] = position[1] - 0.25
-    vec3d[2] = position[2] - 0.0
+    result[1] = 2.0
+
     
-    vec2d2[0] = sdBox(vec3d, 0.25, 0.25, 0.25)
-    vec2d2[1] = 3.0
-
-    opU(result, result, vec2d2)
-    
 
 
-@cuda.jit('void(float64[:], float64[:], float64[:])', device=True)
-def castRay(result, rayOrigin, rayDirection):
+@cuda.jit('void(float64[:], float64[:], float64[:], float64[:])', device=True)
+def castRay(result, rayOrigin, rayDirection, attributes):
     tmin = 1.0
     tmax = 20.0
     
@@ -187,7 +191,7 @@ def castRay(result, rayOrigin, rayDirection):
         pos[1] = rayOrigin[1] + rayDirection[1] * t
         pos[2] = rayOrigin[2] + rayDirection[2] * t
 
-        worldMap(result, pos)
+        worldMap(result, pos, attributes)
 
         if result[0] < precis or t > tmax:
             break
@@ -201,8 +205,8 @@ def castRay(result, rayOrigin, rayDirection):
     result[1] = m
 
 # http://iquilezles.org/www/articles/normalsSDF/normalsSDF.htm
-@cuda.jit('void(float64[:], float64[:])', device=True)
-def calcNormal(outVec, position):
+@cuda.jit('void(float64[:], float64[:], float64[:])', device=True)
+def calcNormal(outVec, position, attributes):
     auxVec = cuda.local.array(shape=3, dtype=float64)
 
     ex = 0.5773 * 0.0005
@@ -210,25 +214,25 @@ def calcNormal(outVec, position):
     auxVec[0] = position[0] + ex
     auxVec[1] = position[1] - ex
     auxVec[2] = position[2] - ex
-    worldMap(outVec, auxVec)
+    worldMap(outVec, auxVec, attributes)
     dx1 = outVec[0]
 
     auxVec[0] = position[0] - ex
     auxVec[1] = position[1] - ex
     auxVec[2] = position[2] + ex
-    worldMap(outVec, auxVec)
+    worldMap(outVec, auxVec, attributes)
     dx2 = outVec[0]
 
     auxVec[0] = position[0] - ex
     auxVec[1] = position[1] + ex
     auxVec[2] = position[2] - ex
-    worldMap(outVec, auxVec)
+    worldMap(outVec, auxVec, attributes)
     dx3 = outVec[0]
 
     auxVec[0] = position[0] + ex
     auxVec[1] = position[1] + ex
     auxVec[2] = position[2] + ex
-    worldMap(outVec, auxVec)
+    worldMap(outVec, auxVec, attributes)
     dx4 = outVec[0]
 
     outVec[0] =   ex * dx1 - ex * dx2 - ex * dx3 + ex * dx4
@@ -245,8 +249,8 @@ def mix(xx, yy, aa):
 
 
 # http://iquilezles.org/www/articles/rmshadows/rmshadows.htm
-@cuda.jit('float64(float64[:], float64[:], float64, float64)', device=True)
-def calcSoftshadow(rayOrigin, rayDirection, mint, tmax):
+@cuda.jit('float64(float64[:], float64[:], float64, float64, float64[:])', device=True)
+def calcSoftshadow(rayOrigin, rayDirection, mint, tmax, attributes):
     result = cuda.local.array(shape=3, dtype=float64)
     position = cuda.local.array(shape=3, dtype=float64)
 
@@ -256,7 +260,7 @@ def calcSoftshadow(rayOrigin, rayDirection, mint, tmax):
         position[0] = rayOrigin[0] + rayDirection[0] * t
         position[1] = rayOrigin[1] + rayDirection[1] * t
         position[2] = rayOrigin[2] + rayDirection[2] * t
-        worldMap( result, position )
+        worldMap( result, position, attributes )
         h = result[0]
         res = min( res, 8.0 * h / t )
         t += clip( h, 0.02, 0.10 )
@@ -267,8 +271,8 @@ def calcSoftshadow(rayOrigin, rayDirection, mint, tmax):
 
 
 
-@cuda.jit('float64(float64[:], float64[:])', device=True)
-def calcAO(position, normal):
+@cuda.jit('float64(float64[:], float64[:], float64[:])', device=True)
+def calcAO(position, normal, attributes):
     result = cuda.local.array(shape=3, dtype=float64)
     aopos = cuda.local.array(shape=3, dtype=float64)
 
@@ -279,7 +283,7 @@ def calcAO(position, normal):
         aopos[0] = position[0] + normal[0] * hr
         aopos[1] = position[1] + normal[1] * hr
         aopos[2] = position[2] + normal[2] * hr
-        worldMap(result, aopos)
+        worldMap(result, aopos, attributes)
         dd = result[0]
         occ += -(dd-hr) * sca
         sca *= 0.95
@@ -288,8 +292,43 @@ def calcAO(position, normal):
 
 
 
-@cuda.jit('void(float64[:], float64[:], float64[:], float64[:])', device=True)
-def render(color, rayOrigin, rayDirection, result):
+
+@cuda.jit('void(float64[:], float64, float64, float64[:,:], float64[:,:], float64[:,:])', device=True)
+def drawDCT(color, XX, YY, FR, FG, FB):
+    
+    currentCol = cuda.local.array(shape=3, dtype=float64)
+
+    color[0] = 0.0
+    color[1] = 0.0
+    color[2] = 0.0
+
+    for uu in range(3):
+        for vv in range(3):
+
+            currentCol[0] = FR[uu, vv] * math.cos((2.0 * XX + 1.0) * float64(uu) * math.pi / 16.0) * math.cos((2.0 * YY + 1.0) * float64(vv) * math.pi / 16.0)
+            currentCol[1] = FG[uu, vv] * math.cos((2.0 * XX + 1.0) * float64(uu) * math.pi / 16.0) * math.cos((2.0 * YY + 1.0) * float64(vv) * math.pi / 16.0)
+            currentCol[2] = FB[uu, vv] * math.cos((2.0 * XX + 1.0) * float64(uu) * math.pi / 16.0) * math.cos((2.0 * YY + 1.0) * float64(vv) * math.pi / 16.0)
+
+            if vv == 0:
+                currentCol[0] = currentCol[0] * 0.707107 
+                currentCol[1] = currentCol[1] * 0.707107 
+                currentCol[2] = currentCol[2] * 0.707107 
+            if uu == 0:
+                currentCol[0] = currentCol[0] * 0.707107 
+                currentCol[1] = currentCol[1] * 0.707107 
+                currentCol[2] = currentCol[2] * 0.707107 
+
+            color[0] = color[0] + currentCol[0]
+            color[1] = color[1] + currentCol[1]
+            color[2] = color[2] + currentCol[2]
+
+    color[0] = color[0] / 4.0
+    color[1] = color[1] / 4.0
+    color[2] = color[2] / 4.0
+
+
+@cuda.jit('void(float64[:], float64[:], float64[:], float64[:], float64[:])', device=True)
+def render(color, rayOrigin, rayDirection, result, attributes):
     
     position = cuda.local.array(shape=3, dtype=float64)
     normal = cuda.local.array(shape=3, dtype=float64)
@@ -298,38 +337,26 @@ def render(color, rayOrigin, rayDirection, result):
     reflection = cuda.local.array(shape=3, dtype=float64)
     hal = cuda.local.array(shape=3, dtype=float64)
 
-    color[0] = 0.7 + rayDirection[1] * 0.8
-    color[1] = 0.9 + rayDirection[1] * 0.8
-    color[2] = 1.0 + rayDirection[1] * 0.8
-
-    castRay(result, rayOrigin, rayDirection)
+    #color[0] = 0.7 + rayDirection[1] * 0.8
+    #color[1] = 0.9 + rayDirection[1] * 0.8
+    #color[2] = 1.0 + rayDirection[1] * 0.8
+    
+    castRay(result, rayOrigin, rayDirection, attributes)
 
     if result[1] > -0.5:
 
-        if result[1] < 1.5:
-            # Floor Color
-            color[0] = 0.3
-            color[1] = 0.3
-            color[2] = 0.3
-        elif result[1] < 2.5:
-            # Sphere Color
-            color[0] = 0.8
-            color[1] = 0.1
-            color[2] = 0.1
-        else:
-            # Box Color
-            color[0] = 0.8
-            color[1] = 0.1
-            color[2] = 0.1
+        color[0] = attributes[8]
+        color[1] = attributes[9]
+        color[2] = attributes[10]
         
         position[0] = rayOrigin[0] + result[0]*rayDirection[0]
         position[1] = rayOrigin[1] + result[0]*rayDirection[1]
         position[2] = rayOrigin[2] + result[0]*rayDirection[2]
-        calcNormal(normal, position)
+        calcNormal(normal, position, attributes)
         reflect(reflection, rayDirection, normal)
         
         # lighitng        
-        occ = calcAO( position, normal )
+        occ = calcAO( position, normal, attributes )
 
         light[0] = -0.4
         light[1] = 0.7
@@ -339,7 +366,7 @@ def render(color, rayOrigin, rayDirection, result):
         amb = clip( 0.5 + 0.5*normal[1], 0.0, 1.0 )
         dif = clip( dotProduct( normal, light ), 0.0, 1.0 )
         
-        dif *= calcSoftshadow( position, light, 0.02, 2.5 )
+        dif *= calcSoftshadow( position, light, 0.02, 2.5, attributes )
         
         hal[0] = light[0] - rayDirection[0]
         hal[1] = light[1] - rayDirection[1]
@@ -355,7 +382,7 @@ def render(color, rayOrigin, rayDirection, result):
         dom = smoothstep( -0.2, 0.2, reflection[1] )
         fre = pow( clip(1.0+dotProduct(normal,rayDirection),0.0,1.0), 2.0 )
 
-        dom *= calcSoftshadow( position, reflection, 0.02, 2.5 )
+        dom *= calcSoftshadow( position, reflection, 0.02, 2.5, attributes )
 
 
         lin[0] = 1.30 * dif * 1.00
@@ -396,7 +423,7 @@ def render(color, rayOrigin, rayDirection, result):
 
 
 @cuda.jit
-def mainRender(io_array, width, height):
+def mainRender(io_array, width, height, attributes):
     offset = cuda.threadIdx.x + cuda.blockIdx.x * cuda.blockDim.x
 
     miscVec1 = cuda.local.array(shape=3, dtype=float64)
@@ -419,10 +446,43 @@ def mainRender(io_array, width, height):
     color[2] = 0.0
 
     AA = 2
-    currenTime = -10
 
     xx = offset / height
-    yy = offset % height
+    yy = offset % height    
+    
+    FR = cuda.local.array(shape=(3,3), dtype=float64)
+    FG = cuda.local.array(shape=(3,3), dtype=float64)
+    FB = cuda.local.array(shape=(3,3), dtype=float64)
+
+    FR[0,0] = attributes[11] * 1.0
+    FR[0,1] = attributes[12] * 1.0
+    FR[0,2] = attributes[13] * 1.0
+    FR[1,0] = attributes[14] * 1.0
+    FR[1,1] = attributes[15] * 1.0
+    FR[1,2] = attributes[16] * 1.0
+    FR[2,0] = attributes[17] * 1.0
+    FR[2,1] = attributes[18] * 1.0
+    FR[2,2] = attributes[19] * 1.0
+    
+    FG[0,0] = attributes[20] * 1.0
+    FG[0,1] = attributes[21] * 1.0
+    FG[0,2] = attributes[22] * 1.0
+    FG[1,0] = attributes[23] * 1.0
+    FG[1,1] = attributes[24] * 1.0
+    FG[1,2] = attributes[25] * 1.0
+    FG[2,0] = attributes[26] * 1.0
+    FG[2,1] = attributes[27] * 1.0
+    FG[2,2] = attributes[28] * 1.0
+
+    FB[0,0] = attributes[29] * 1.0
+    FB[0,1] = attributes[30] * 1.0
+    FB[0,2] = attributes[31] * 1.0
+    FB[1,0] = attributes[32] * 1.0
+    FB[1,1] = attributes[33] * 1.0
+    FB[1,2] = attributes[34] * 1.0
+    FB[2,0] = attributes[35] * 1.0
+    FB[2,1] = attributes[36] * 1.0
+    FB[2,2] = attributes[37] * 1.0
     
     for m in range(AA):
         for n in range(AA):
@@ -432,18 +492,18 @@ def mainRender(io_array, width, height):
 
             miscVec1[0] = (2.0 * (xx + miscVec1[0]) - float64(width)) / float64(height)
             miscVec1[1] = (2.0 * (yy + miscVec1[1]) - float64(height)) / float64(height)
-            miscVec1[2] = 2.0
+            miscVec1[2] = 4.0
             normalize(miscVec1, miscVec1)
 
-            # camera    
+            # camera position
+            rayOrigin[0] = 0.0
+            rayOrigin[1] = 2.5
+            rayOrigin[2] = -1.5
             
-            rayOrigin[0] = 4.6 * math.cos(0.1*currenTime)
-            rayOrigin[1] = 1.0
-            rayOrigin[2] = 0.5 + 4.6 * math.sin(0.1*currenTime)
-            
-            miscVec2[0] = -0.5
-            miscVec2[1] = -0.4
-            miscVec2[2] = 0.5
+            # camera look at
+            miscVec2[0] = 0.0
+            miscVec2[1] = 1.0
+            miscVec2[2] = 0.0
             
             # camera-to-world transformation
             setCamera(cameraToWorld, rayOrigin, miscVec2, 0.0, miscVec3)
@@ -451,9 +511,11 @@ def mainRender(io_array, width, height):
             # ray direction
             matMul(rayDirection, cameraToWorld, miscVec1)
 
+            # DCT Colors
+            drawDCT(color, float64(xx * 8) / float64(width), float64(yy * 8) / float64(height), FR, FG, FB)
 
             # render    
-            render(color, rayOrigin, rayDirection, resultVec)
+            render(color, rayOrigin, rayDirection, resultVec, attributes)
 
             # gamma
             totalColor[0] += pow(color[0], 0.4545)
@@ -466,20 +528,84 @@ def mainRender(io_array, width, height):
 
 
 
-tWidth = 800
-tHeight = 600
+# Goal: Set Size + Screen-to-Object ratio
+
+tWidth = 28 #600
+tHeight = 28 #600
+
+# Attributes:
+# 0  -> Shape
+# 1  -> RotationXSin
+# 2  -> RotationYSin
+# 3  -> RotationZSin
+# 4  -> RotationXCos
+# 5  -> RotationYCos
+# 6  -> RotationZCos
+# 7  -> Size
+# 8  -> ColorR
+# 9  -> ColorG
+# 10 -> ColorB
+# 11 -> DCTR[0,0]
+# 12 -> DCTR[0,1]
+# 13 -> DCTR[0,2]
+# 14 -> DCTR[1,0]
+# 15 -> DCTR[1,1]
+# 16 -> DCTR[1,2]
+# 17 -> DCTR[2,0]
+# 18 -> DCTR[2,1]
+# 19 -> DCTR[2,2]
+# 20 -> DCTG[0,0]
+# 21 -> DCTG[0,1]
+# 22 -> DCTG[0,2]
+# 23 -> DCTG[1,0]
+# 24 -> DCTG[1,1]
+# 25 -> DCTG[1,2]
+# 26 -> DCTG[2,0]
+# 27 -> DCTG[2,1]
+# 28 -> DCTG[2,2]
+# 29 -> DCTB[0,0]
+# 30 -> DCTB[0,1]
+# 31 -> DCTB[0,2]
+# 32 -> DCTB[1,0]
+# 33 -> DCTB[1,1]
+# 34 -> DCTB[1,2]
+# 35 -> DCTB[2,0]
+# 36 -> DCTB[2,1]
+# 37 -> DCTB[2,2]
+
+# Actual Attributes:
+xAngle = 0.0
+yAngle = 0.0
+zAngle = 0.0
+
+#####
+
+mainAttributes = np.random.rand(38)
+
+mainAttributes[0] = 1.0
+
+mainAttributes[1] = math.sin(math.pi * 0.5 * zAngle)
+mainAttributes[4] = math.cos(math.pi * 0.5 * zAngle)
+
+mainAttributes[2] = math.sin(math.pi * 0.5 * yAngle)
+mainAttributes[5] = math.cos(math.pi * 0.5 * yAngle)
+
+mainAttributes[3] = math.sin(math.pi * 0.5 * (xAngle - 0.5))
+mainAttributes[6] = math.cos(math.pi * 0.5 * (xAngle - 0.5))
+
+mainAttributes[7] = 1.0
+
+
+deviceAttributes = cuda.to_device(mainAttributes)
 
 data = np.zeros((tWidth * tHeight, 3), dtype=float)
 threadsperblock = 32 
 blockspergrid = (tHeight * tWidth + (threadsperblock - 1)) // threadsperblock
 
-for xa in range(10):
+for xa in range(1):
     start = time.time()
-
-    mainRender[blockspergrid, threadsperblock](data, tWidth, tHeight)
-
+    mainRender[blockspergrid, threadsperblock](data, tWidth, tHeight, deviceAttributes)
     end = time.time()
-
     print("Time needed for Render: " + str(end - start))
 
 pixels = np.zeros((tHeight, tWidth, 3), dtype=float)
