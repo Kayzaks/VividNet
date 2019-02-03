@@ -13,6 +13,9 @@ class Attribute:
     def getValue(self):
         return self._value
 
+    def setValue(self, value : float):
+        self._value = value
+
     def getName(self):
         return self._type.getName()
 

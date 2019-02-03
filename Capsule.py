@@ -27,6 +27,24 @@ class Capsule:
             route.resizeInternals()
 
 
+    def createAttribute(self, name : str, attributePool : AttributePool):
+        newAttribute = attributePool.createAttribute(name)
+        if newAttribute is not None:
+            self._attributes.append(newAttribute)
+
+
     def getAttributes(self):
         return self._attributes
+
+    def getAttributeValue(self, name : str):
+        for attr in self._attributes:
+            if attr.getName().lower() == name.lower():
+                return attr.getValue()
+        
+        return 0.0
+
+    def setAttributeValue(self, name : str, value : float):
+        for attr in self._attributes:
+            if attr.getName().lower() == name.lower():
+                attr.setValue(value)
 

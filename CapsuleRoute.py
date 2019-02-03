@@ -1,5 +1,4 @@
 
-from Capsule import Capsule
 from CapsuleMemory import CapsuleMemory
 from NeuralNet import NeuralNet
 from Attribute import Attribute
@@ -7,11 +6,11 @@ from Utility import Utility
 
 class CapsuleRoute:
 
-    def __init__(self, parentCapsule : Capsule, capsuleRouteName : str, fromCapsules : list):
+    def __init__(self, parentCapsule, capsuleRouteName : str, fromCapsules : list):
         self._name                  : str           = capsuleRouteName
         self._memory                : CapsuleMemory = CapsuleMemory()
         self._fromCapsules          : list          = fromCapsules      # Capsules
-        self._parentCapsule         : Capsule       = parentCapsule
+        self._parentCapsule                         = parentCapsule
 
         self._gFunctionLambda                       = None 
         self._gammaFunctionLambda                   = None

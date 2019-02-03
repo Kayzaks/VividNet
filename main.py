@@ -3,6 +3,9 @@ from Attribute import Attribute
 from AttributeType import AttributeType
 from AttributeType import AttributeLexical
 from AttributePool import AttributePool
+from Capsule import Capsule
+from ShapesRenderer import Shapes
+from ShapesRenderer import ShapesRenderer
 from GraphicsUserInterface import GraphicsUserInterface
 from Utility import Utility
 from NeuralNet import NeuralNet
@@ -12,8 +15,49 @@ import random
 import math
 
 
-testUI = GraphicsUserInterface()
 attrPool = AttributePool()
+capsule = Capsule()
+
+renderer = ShapesRenderer()
+renderer.setShapeAttributePool(attrPool)
+renderer.createAttributesForShape(Shapes.Sphere, capsule, attrPool)
+
+capsule.setAttributeValue("X-Size", 1.0)
+capsule.setAttributeValue("Y-Size", 1.0)
+capsule.setAttributeValue("Z-Size", 1.0)
+
+capsule.setAttributeValue("X-Rot", 0.5)
+capsule.setAttributeValue("Y-Rot", 0.5)
+capsule.setAttributeValue("Z-Rot", 0.0)
+
+capsule.setAttributeValue("R-Color", 1.0)
+capsule.setAttributeValue("G-Color", 1.0)
+capsule.setAttributeValue("B-Color", 1.0)
+
+capsule.setAttributeValue("DCTR-0-0", 0.0)
+capsule.setAttributeValue("DCTR-0-1", 0.0)
+capsule.setAttributeValue("DCTR-0-2", 0.0)
+capsule.setAttributeValue("DCTR-1-0", 0.0)
+capsule.setAttributeValue("DCTR-1-1", 0.0)
+capsule.setAttributeValue("DCTR-1-2", 0.0)
+capsule.setAttributeValue("DCTR-2-0", 0.0)
+capsule.setAttributeValue("DCTR-2-1", 0.0)
+capsule.setAttributeValue("DCTR-2-2", 0.0)
+
+capsule.setAttributeValue("Light-X-Dir", -0.4)
+capsule.setAttributeValue("Light-Y-Dir", 0.7)
+capsule.setAttributeValue("Light-Z-Dir", -0.6)
+
+capsule.setAttributeValue("Light-R-Color", 1.0)
+capsule.setAttributeValue("Light-G-Color", 1.0)
+capsule.setAttributeValue("Light-B-Color", 1.0)
+
+
+renderer.renderShape(Shapes.Sphere, capsule, 400, 400)
+
+
+'''
+testUI = GraphicsUserInterface()
 
 attrPool.createType("X-Pos", AttributeLexical.Preposition)
 attrPool.createType("Y-Pos", AttributeLexical.Preposition)
@@ -110,4 +154,4 @@ for key, val in outputs.items():
 
 pixels2 = gFunction(detectedAttributes)
 
-testUI.drawArrayCompare("Actual", "Detected", pixels, pixels2, pixelsAcross, pixelsAcross)
+testUI.drawArrayCompare("Actual", "Detected", pixels, pixels2, pixelsAcross, pixelsAcross)'''

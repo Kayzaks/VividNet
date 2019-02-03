@@ -11,6 +11,9 @@ class AttributeLexical(Enum):
     # Visual
     Pixel       = 10
 
+    # Non-Transmitted
+    NonTransmit = 20
+
 
 class AttributeType:
 
