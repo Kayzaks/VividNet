@@ -6,15 +6,15 @@ import numpy
 class GraphicsUserInterface:
 
     def drawArray(self, pixels : list, width : int, height : int):
-        plt.imshow(pixels)
+        plt.imshow(numpy.reshape(pixels, [width, height, 3]))
         plt.show()
 
         
     def drawArrayCompare(self, title1 : str, title2 : str, 
                          pixels1 : list, pixels2 : list, width : int, height : int):
         fig, axarr = plt.subplots(1,2)
-        axarr[0].imshow(numpy.reshape(pixels1, [width, height]), cmap='gray')
-        axarr[1].imshow(numpy.reshape(pixels2, [width, height]), cmap='gray')
+        axarr[0].imshow(numpy.reshape(pixels1, [width, height, 3]))
+        axarr[1].imshow(numpy.reshape(pixels2, [width, height, 3]))
         axarr[0].set_title(title1)
         axarr[1].set_title(title2)
         plt.show()

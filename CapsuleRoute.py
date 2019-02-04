@@ -56,8 +56,8 @@ class CapsuleRoute:
             self._gInputMapping[attribute] = idx
             self._gammaOutputMapping[idx] = attribute
 
-        self._neuralNetGamma        : NeuralNet     = NeuralNet(self._gammaInputMapping, self._gInputMapping, self._name + "-gamma")
-        self._neuralNetG            : NeuralNet     = NeuralNet(self._gInputMapping, self._gammaInputMapping, self._name + "-g")
+        self._neuralNetGamma        : NeuralNet     = NeuralNet(self._gammaInputMapping, self._gInputMapping, self._name + "-gamma", False)
+        self._neuralNetG            : NeuralNet     = NeuralNet(self._gInputMapping, self._gammaInputMapping, self._name + "-g", True)
 
         self.retrain()
 

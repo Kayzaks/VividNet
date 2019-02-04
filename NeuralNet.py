@@ -6,12 +6,13 @@ from CapsuleMemory import CapsuleMemory
 
 class NeuralNet:
 
-    def __init__(self, inputMapping : dict, outputMapping : dict, neuralNetName : str):
+    def __init__(self, inputMapping : dict, outputMapping : dict, neuralNetName : str, swapInputOutput : bool):
         self._name          : str   = neuralNetName
         self._inputMapping  : dict  = inputMapping                      # Attribute - Index
         self._outputMapping : dict  = outputMapping                     # Attribute - Index
         self._numInputs     : int   = max(inputMapping.values())  + 1
         self._numOutputs    : int   = max(outputMapping.values()) + 1
+        self._swapInOut     : bool  = swapInputOutput
 
         # Tensorflow Tensors and Co.
         self._nnX                   = None
@@ -48,7 +49,7 @@ class NeuralNet:
             'h1': tf.Variable(tf.truncated_normal([self._numInputs, numHidden1])),
             'h2': tf.Variable(tf.truncated_normal([numHidden1, numHidden2])),
             'out': tf.Variable(tf.truncated_normal([numHidden2, self._numOutputs]))
-        }
+        } 
         biases = {
             'b1': tf.Variable(tf.random_uniform([numHidden1])),
             'b2': tf.Variable(tf.random_uniform([numHidden2])),
@@ -68,13 +69,13 @@ class NeuralNet:
         self._nnFullTensor = tf.matmul(layer2, weights['out']) + biases['out']
 
 
-    def trainFromData(self, trainingData : CapsuleMemory, boolShowDebugOutput : bool = False):
+    def trainFromData(self, trainingData : CapsuleMemory, showDebugOutput : bool = False):
 
         tf.reset_default_graph()
 
         learningRate = 0.001 # 0.001
         batchSize =  64 # 64
-        numSteps = 60000 #60000 # 60000
+        numSteps = 6000 #60000 # 60000
         
         self.createGraph()
 
@@ -99,14 +100,18 @@ class NeuralNet:
 
             for step in range(0, numSteps+1):        
 
-                batchX, batchY = trainingData.nextBatch(batchSize, self._inputMapping, self._outputMapping)
+                if self._swapInOut is True:
+                    batchY, batchX = trainingData.nextBatch(batchSize, self._outputMapping, self._inputMapping)
+                else:
+                    batchX, batchY = trainingData.nextBatch(batchSize, self._inputMapping, self._outputMapping)
+
                 sess.run(train, feed_dict={self._nnX: batchX, self._nnY: batchY, self._nnDropOutRate: 0.7})
 
                 if keyboard.is_pressed('#'):
                     print('Exiting training early...')
                     break
                     
-                if boolShowDebugOutput is True and step % (int(numSteps / 500)) == 0:
+                if showDebugOutput is True and step % (int(numSteps / 500)) == 0:
                     count += 1
                     summary, currloss = sess.run([merge, loss], feed_dict={self._nnX: batchX, self._nnY: batchY, self._nnDropOutRate: 1.0})
                     print(str(100 * step / numSteps) + "% done")

@@ -2,6 +2,8 @@ from Attribute import Attribute
 from Utility import Utility
 import numpy
 
+# TODO: Merge all Lambda stuff into Route. Only generate Data here
+
 class CapsuleMemory:
 
     def __init__(self):
@@ -20,7 +22,7 @@ class CapsuleMemory:
         self._scrambled         : list  = None   # Column Index
 
 
-    def setLambdaKnownG(self, lambdaYGenerator, lambdaXInferer, yMapping : dict, xMapping : dict):
+    def setLambdaKnownG(self, lambdaYGenerator, lambdaXInferer, xMapping : dict, yMapping : dict):
         # xMapping  # Column Index - Attribute
         # yMapping  # Column Index - Attribute
         self._lambdaYGenerator = lambdaYGenerator
