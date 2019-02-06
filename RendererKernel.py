@@ -326,7 +326,7 @@ def render(color, rayOrigin, rayDirection, result, attributes):
     lin = cuda.local.array(shape=3, dtype=float32)
     light = cuda.local.array(shape=3, dtype=float32)
     reflection = cuda.local.array(shape=3, dtype=float32)
-    hal = cuda.local.array(shape=3, dtype=float32)
+    halfAngle = cuda.local.array(shape=3, dtype=float32)
     
     castRay(result, rayOrigin, rayDirection, attributes)
 
@@ -341,64 +341,58 @@ def render(color, rayOrigin, rayDirection, result, attributes):
         position[2] = rayOrigin[2] + result[0]*rayDirection[2]
         calcNormal(normal, position, attributes)
         reflect(reflection, rayDirection, normal)
-        
-        # lighitng        
+             
+        # Ambient Occlusion
         occ = calcAO( position, normal, attributes )
 
+        ## Lighting 
         light[0] = attributes[43]
         light[1] = attributes[44]
         light[2] = attributes[45]
-        normalize(light, light)
 
-        amb = clip( 0.5 + 0.5*normal[1], 0.0, 1.0 )
-        dif = clip( dotProduct( normal, light ), 0.0, 1.0 )
+        # Ambient
+        ambient = clip( 0.5 + 0.5*normal[1], 0.0, 1.0 )
+
+        # Diffuse - Lambertian
+        diffuse = clip( dotProduct( normal, light ), 0.0, 1.0 )
+        diffuse *= calcSoftshadow( position, light, 0.02, 2.5, attributes )
         
-        dif *= calcSoftshadow( position, light, 0.02, 2.5, attributes )
-        
-        hal[0] = light[0] - rayDirection[0]
-        hal[1] = light[1] - rayDirection[1]
-        hal[2] = light[2] - rayDirection[2]
-        normalize(hal, hal)
-        spe = pow( clip( dotProduct( normal, hal ), 0.0, 1.0 ), 16.0) * dif * (0.04 + 0.96 * pow( clip(1.0+dotProduct(hal,rayDirection),0.0,1.0), 5.0 ))
+        # Specular - Blinn-Phong
+        halfAngle[0] = light[0] - rayDirection[0]
+        halfAngle[1] = light[1] - rayDirection[1]
+        halfAngle[2] = light[2] - rayDirection[2]
+        normalize(halfAngle, halfAngle)
+        specular = pow( clip( dotProduct( normal, halfAngle ), 0.0, 1.0 ), attributes[53]) # * diffuse * (0.04 + 0.96 * pow( clip(1.0+dotProduct(halfAngle, rayDirection),0.0,1.0), 25.0 ))
        
-        hal[0] = -light[0]
-        hal[1] = 0.0
-        hal[2] = -light[2]
-        normalize(hal, hal)
-        bac = clip(dotProduct(normal, hal), 0.0, 1.0 )*clip( 1.0-position[1],0.0,1.0)
-        dom = smoothstep( -0.2, 0.2, reflection[1] )
-        fre = pow( clip(1.0+dotProduct(normal,rayDirection),0.0,1.0), 2.0 )
+        # Fresnel
+        halfAngle[0] = -light[0]
+        halfAngle[1] = 0.0
+        halfAngle[2] = -light[2]
+        normalize(halfAngle, halfAngle)
+        fresnel = pow( clip(1.0+dotProduct(normal,rayDirection),0.0,1.0), attributes[58] )
 
-        dom *= calcSoftshadow( position, reflection, 0.02, 2.5, attributes )
+        #        Diffuse Power              Diffuse Color    Light Color
+        lin[0] = attributes[49] * diffuse * attributes[50] * attributes[40]
+        lin[1] = attributes[49] * diffuse * attributes[51] * attributes[41]
+        lin[2] = attributes[49] * diffuse * attributes[52] * attributes[42]
 
-
-        lin[0] = 1.30 * dif * 1.00
-        lin[1] = 1.30 * dif * 0.80
-        lin[2] = 1.30 * dif * 0.55
-
-        lin[0] += 0.30 * amb * 0.40 * occ
-        lin[1] += 0.30 * amb * 0.60 * occ
-        lin[2] += 0.30 * amb * 1.00 * occ
-
-        lin[0] += 0.40 * dom * 0.40 * occ
-        lin[1] += 0.40 * dom * 0.60 * occ
-        lin[2] += 0.40 * dom * 1.00 * occ
-
-        lin[0] += 0.50 * bac * 0.25 * occ
-        lin[1] += 0.50 * bac * 0.25 * occ
-        lin[2] += 0.50 * bac * 0.25 * occ
-
-        lin[0] += 0.25 * fre * 1.00 * occ
-        lin[1] += 0.25 * fre * 1.00 * occ
-        lin[2] += 0.25 * fre * 1.00 * occ
         
-        color[0] = color[0] * lin[0] * attributes[40]
-        color[1] = color[1] * lin[1] * attributes[41]
-        color[2] = color[2] * lin[2] * attributes[42]
+        #         Ambient Power              Ambient Color
+        lin[0] += attributes[59] * ambient * attributes[60] * occ
+        lin[1] += attributes[59] * ambient * attributes[61] * occ
+        lin[2] += attributes[59] * ambient * attributes[62] * occ
 
-        color[0] += 9.0 * spe * 1.0
-        color[1] += 9.0 * spe * 0.9
-        color[2] += 9.0 * spe * 0.7
+        lin[0] += 0.25 * fresnel * 1.00 * occ
+        lin[1] += 0.25 * fresnel * 1.00 * occ
+        lin[2] += 0.25 * fresnel * 1.00 * occ
+        
+        color[0] = color[0] * lin[0]
+        color[1] = color[1] * lin[1]
+        color[2] = color[2] * lin[2]
+        #           Specular Power              Specular Color   Light Color
+        color[0] += attributes[54] * specular * attributes[55] * attributes[40] 
+        color[1] += attributes[54] * specular * attributes[56] * attributes[41]
+        color[2] += attributes[54] * specular * attributes[57] * attributes[42]
 
         dx = 1.0-math.exp( -0.0002*result[0]*result[0]*result[0] )
         color[0] = mix( color[0], 0.8, dx )

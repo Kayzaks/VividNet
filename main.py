@@ -14,83 +14,73 @@ import numpy as np
 import random
 import math
 
+if __name__ == '__main__':
 
-# TODO: "Make Shape Capsule"
+    # TODO: "Make Shape Capsule"
 
-testUI = GraphicsUserInterface()
-attrPool = AttributePool()
-sphereCapsule = Capsule("Sphere-Shape")
+    testUI = GraphicsUserInterface()
+    attrPool = AttributePool()
+    sphereCapsule = Capsule("Sphere-Shape")
 
-renderer = ShapesRenderer()
-renderer.createAttributesForShape(Shapes.Sphere, sphereCapsule, attrPool)
+    renderer = ShapesRenderer()
+    renderer.createAttributesForShape(Shapes.Sphere, sphereCapsule, attrPool)
 
-sphereCapsule.setAttributeValue("X-Size", 1.0)
-sphereCapsule.setAttributeValue("Y-Size", 1.0)
-sphereCapsule.setAttributeValue("Z-Size", 1.0)
+    width = 28
+    height = 28
 
-sphereCapsule.setAttributeValue("X-Rot", 0.5)
-sphereCapsule.setAttributeValue("Y-Rot", 0.5)
-sphereCapsule.setAttributeValue("Z-Rot", 0.0)
+    pixelCapsule = Capsule("PixelLayer-28-28")
+    renderer.createAttributesForPixelLayer(width, height, pixelCapsule, attrPool)
 
-sphereCapsule.setAttributeValue("R-Color", 1.0)
-sphereCapsule.setAttributeValue("G-Color", 1.0)
-sphereCapsule.setAttributeValue("B-Color", 1.0)
-
-sphereCapsule.setAttributeValue("DCTR-0-0", 0.0)
-sphereCapsule.setAttributeValue("DCTR-0-1", 0.0)
-sphereCapsule.setAttributeValue("DCTR-0-2", 0.0)
-sphereCapsule.setAttributeValue("DCTR-1-0", 0.0)
-sphereCapsule.setAttributeValue("DCTR-1-1", 0.0)
-sphereCapsule.setAttributeValue("DCTR-1-2", 0.0)
-sphereCapsule.setAttributeValue("DCTR-2-0", 0.0)
-sphereCapsule.setAttributeValue("DCTR-2-1", 0.0)
-sphereCapsule.setAttributeValue("DCTR-2-2", 0.0)
-
-sphereCapsule.setAttributeValue("Light-X-Dir", 0.3)
-sphereCapsule.setAttributeValue("Light-Y-Dir", 0.7)
-sphereCapsule.setAttributeValue("Light-Z-Dir", 0.6)
-
-sphereCapsule.setAttributeValue("Light-R-Color", 1.0)
-sphereCapsule.setAttributeValue("Light-G-Color", 1.0)
-sphereCapsule.setAttributeValue("Light-B-Color", 1.0)
-
-width = 28
-height = 28
-
-pixelCapsule = Capsule("PixelLayer-28-28")
-renderer.createAttributesForPixelLayer(width, height, pixelCapsule, attrPool)
-
-sphereCapsule.addNewRoute([pixelCapsule])
+    sphereCapsule.addNewRoute([pixelCapsule])
 
 
-outMapIdxAttr, outMapAttrIdx = renderer.getLambdaGOutputMap(Shapes.Sphere, pixelCapsule, width, height)
-inMapIdxAttr, inMapAttrIdx = renderer.getLambdaGInputMap(Shapes.Sphere, sphereCapsule)
+    outMapIdxAttr, outMapAttrIdx = renderer.getLambdaGOutputMap(Shapes.Sphere, pixelCapsule, width, height)
+    inMapIdxAttr, inMapAttrIdx = renderer.getLambdaGInputMap(Shapes.Sphere, sphereCapsule)
 
-sphereCapsule._routes[0]._memory.setLambdaKnownG(
-    (lambda : renderer.renderInputGenerator(Shapes.Sphere, width, height)), 
-    (lambda attr: renderer.renderShape(Shapes.Sphere, attr, width, height)),
-                        outMapIdxAttr, inMapIdxAttr)
-
-
-testNN = NeuralNet(outMapAttrIdx, inMapAttrIdx, "TestNN", False)
-
-testNN.trainFromData(sphereCapsule._routes[0]._memory, True)
+    sphereCapsule._routes[0]._memory.setLambdaKnownG(
+        (lambda : renderer.renderInputGenerator(Shapes.Sphere, width, height)), 
+        (lambda attr: renderer.renderShape(Shapes.Sphere, attr, width, height)),
+                            outMapIdxAttr, inMapIdxAttr)
 
 
 
-batchX, batchY = sphereCapsule._routes[0]._memory.nextBatch(1, outMapAttrIdx, inMapAttrIdx)
-
-inputs = Utility.mapDataOneWay(batchX[0], outMapIdxAttr)
-outputs = testNN.forwardPass(inputs)
+    testNN = NeuralNet(outMapAttrIdx, inMapAttrIdx, "SphereModel", False)
+    testNN.trainFromData(sphereCapsule._routes[0]._memory, False)
 
 
-pixels1 = renderer.renderShape(Shapes.Sphere, batchY[0], width, height)
-pixels2 = renderer.renderShape(Shapes.Sphere, Utility.mapDataOneWayDict(outputs, inMapIdxAttr), width, height)
+
+    testUI = GraphicsUserInterface()
 
 
-testUI = GraphicsUserInterface()
 
-testUI.drawArrayCompare("Real", "Detected", pixels1, pixels2, width, height)
+    from scipy import misc
+
+    image = misc.imread("Tests/CLEVR_2.png")
+    image = np.asarray(image).astype(np.float32).flatten() * (1.0/255.0)
+
+    inputs = Utility.mapDataOneWay(image, outMapIdxAttr)
+    outputs = testNN.forwardPass(inputs)
+    
+    pixels2 = renderer.renderShape(Shapes.Sphere, Utility.mapDataOneWayDict(outputs, inMapIdxAttr), width, height)
+
+    testUI.drawArrayCompare("Real", "Detected", image, pixels2, width, height)
+
+    for i in range(3):
+        batchX, batchY = sphereCapsule._routes[0]._memory.nextBatch(1, outMapAttrIdx, inMapAttrIdx)
+        inputs = Utility.mapDataOneWay(batchX[0], outMapIdxAttr)
+
+        outputs = testNN.forwardPass(inputs)
+
+        pixels1 = renderer.renderShape(Shapes.Sphere, batchY[0], width, height)
+        pixels2 = renderer.renderShape(Shapes.Sphere, Utility.mapDataOneWayDict(outputs, inMapIdxAttr), width, height)
+
+        print(np.dot(pixels1, pixels2) / np.dot(pixels1, pixels1))
+
+        testUI.drawArrayCompare("Real", "Detected", pixels1, pixels2, width, height)
+
+
+
+
 
 
 

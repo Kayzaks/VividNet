@@ -1,11 +1,51 @@
-import tensorflow as tf
+import autokeras as ak
+import numpy as np
+from autokeras.nn.loss_function import regression_loss
+from autokeras.image.image_supervised import ImageSupervised, PortableImageRegressor
+from autokeras.nn.metric import Accuracy, MSE
+from autokeras.utils import pickle_to_file, pickle_from_file
 import keyboard
+import threading
 from Utility import Utility
 from pathlib import Path
 from CapsuleMemory import CapsuleMemory
 
-class NeuralNet:
 
+class ImageRegressorN(ImageSupervised):
+
+    def __init__(self, numOutputs : int, augment=None, **kwargs):
+        self._numOutputs = numOutputs
+        super().__init__(augment, **kwargs)
+
+    @property
+    def loss(self):
+        return regression_loss
+
+    @property
+    def metric(self):
+        return MSE
+
+    def get_n_output_node(self):
+        return self._numOutputs
+
+    def transform_y(self, y_train):
+        return y_train
+
+    def inverse_transform_y(self, output):
+        return output.flatten()
+
+    def export_autokeras_model(self, model_file_name):
+        """ Creates and Exports the AutoKeras model to the given filename. """
+        portable_model = PortableImageRegressor(graph=self.cnn.best_model,
+                                                y_encoder=self.y_encoder,
+                                                data_transformer=self.data_transformer,
+                                                resize_params=self.resize_shape,
+                                                path=self.path)
+        pickle_to_file(portable_model, model_file_name)
+
+
+
+class NeuralNet:
     def __init__(self, inputMapping : dict, outputMapping : dict, neuralNetName : str, swapInputOutput : bool):
         self._name          : str   = neuralNetName
         self._inputMapping  : dict  = inputMapping                      # Attribute - Index
@@ -14,17 +54,14 @@ class NeuralNet:
         self._numOutputs    : int   = max(outputMapping.values()) + 1
         self._swapInOut     : bool  = swapInputOutput
 
-        # Tensorflow Tensors and Co.
-        self._nnX                   = None
-        self._nnY                   = None
-        self._nnDropOutRate         = None
-        self._nnFullTensor          = None
+        # Auto-Keras Model
+        self._nnModel               = None
 
         self.loadFromFile()
 
     
     def hasTraining(self):
-        fpath = Path("Models/" + self._name + ".ckpt.meta")
+        fpath = Path("Models/" + self._name)
         if fpath.is_file():
             return True
         else:
@@ -32,100 +69,45 @@ class NeuralNet:
 
 
     def loadFromFile(self):
-        if self.hasTraining():
-            return 1
-
-
-    def createGraph(self):     
-        # TODO: Infer number   
-        numHidden1 = 256  # 256 
-        numHidden2 = 128  # 128
-
-        self._nnX           = tf.placeholder("float", [None, self._numInputs], name="X")
-        self._nnY           = tf.placeholder("float", [None, self._numOutputs], name="Y")
-        self._nnDropOutRate = tf.placeholder(tf.float32)
-
-        weights = {
-            'h1': tf.Variable(tf.truncated_normal([self._numInputs, numHidden1])),
-            'h2': tf.Variable(tf.truncated_normal([numHidden1, numHidden2])),
-            'out': tf.Variable(tf.truncated_normal([numHidden2, self._numOutputs]))
-        } 
-        biases = {
-            'b1': tf.Variable(tf.random_uniform([numHidden1])),
-            'b2': tf.Variable(tf.random_uniform([numHidden2])),
-            'out': tf.Variable(tf.random_uniform([self._numOutputs]))
-        }
-
-        tf.summary.histogram("h1", weights['h1'])
-        tf.summary.histogram("h2", weights['h2'])
-        tf.summary.histogram("outh", weights['out'])
-        
-        tf.summary.histogram("b1", biases['b1'])
-        tf.summary.histogram("b2", biases['b2'])
-        tf.summary.histogram("outb", biases['out'])
-
-        layer1 = tf.nn.dropout(tf.nn.tanh(tf.add(tf.matmul(self._nnX, weights['h1']), biases['b1'])), self._nnDropOutRate)
-        layer2 = tf.nn.dropout(tf.nn.tanh(tf.add(tf.matmul(layer1, weights['h2']), biases['b2'])), self._nnDropOutRate)
-        self._nnFullTensor = tf.matmul(layer2, weights['out']) + biases['out']
+        if self._nnModel is None and self.hasTraining():
+            self._nnModel = pickle_from_file("Models/" + self._name)
 
 
     def trainFromData(self, trainingData : CapsuleMemory, showDebugOutput : bool = False):
+        if threading.current_thread() == threading.main_thread():
+            numTrain = 60000
+            numTest = 2000 
+            timeLimit = 60*60*8
 
-        tf.reset_default_graph()
+            X_train = None
+            Y_train = None
+            X_test = None
+            Y_test = None
 
-        learningRate = 0.001 # 0.001
-        batchSize =  64 # 64
-        numSteps = 6000 #60000 # 60000
-        
-        self.createGraph()
+            if self._swapInOut is False:
+                X_train, Y_train = trainingData.nextBatch(numTrain, self._inputMapping, self._outputMapping)
+                X_test, Y_test = trainingData.nextBatch(numTest, self._inputMapping, self._outputMapping)
+            else:
+                Y_train, X_train = trainingData.nextBatch(numTrain, self._outputMapping, self._inputMapping)
+                Y_test, X_test = trainingData.nextBatch(numTest, self._outputMapping, self._inputMapping)
 
-        loss = tf.reduce_mean(tf.losses.mean_squared_error(predictions=self._nnFullTensor, labels=self._nnY, weights=100.0))
-        train = tf.train.AdamOptimizer(learning_rate=learningRate).minimize(loss)
 
-        init = tf.global_variables_initializer()
-        saver = tf.train.Saver()
-        
-        tf.summary.histogram("loss", loss)
-        count = 0
+            X_train = np.asarray(X_train)
+            X_test = np.asarray(X_test)
+            Y_train = np.asarray(Y_train)
+            Y_test = np.asarray(Y_test)
 
-        with tf.Session() as sess:
+            # TODO: Correct Shape
+            X_train = X_train.reshape((numTrain, 28, 28, 3))
+            X_test = X_test.reshape((numTest, 28, 28, 3))
 
-            trainWriter = tf.summary.FileWriter( './logs/train', sess.graph)
-            sess.run(init)
+            self._nnModel = ImageRegressorN(self._numOutputs, verbose=True, augment=True)
+
+            self._nnModel.fit(X_train, Y_train, time_limit=timeLimit)
+            self._nnModel.final_fit(X_train, Y_train, X_test, Y_test, retrain=False)
+
             
-            if self.hasTraining():
-                saver.restore(sess, "Models/" + self._name + ".ckpt") 
-
-            merge = tf.summary.merge_all()
-
-            for step in range(0, numSteps+1):        
-
-                if self._swapInOut is True:
-                    batchY, batchX = trainingData.nextBatch(batchSize, self._outputMapping, self._inputMapping)
-                else:
-                    batchX, batchY = trainingData.nextBatch(batchSize, self._inputMapping, self._outputMapping)
-
-                sess.run(train, feed_dict={self._nnX: batchX, self._nnY: batchY, self._nnDropOutRate: 0.7})
-
-                if keyboard.is_pressed('#'):
-                    print('Exiting training early...')
-                    break
-                    
-                if showDebugOutput is True and step % (int(numSteps / 500)) == 0:
-                    count += 1
-                    summary, currloss = sess.run([merge, loss], feed_dict={self._nnX: batchX, self._nnY: batchY, self._nnDropOutRate: 1.0})
-                    print(str(100 * step / numSteps) + "% done")
-                    print("Current Loss = " + "{:.4f}".format(currloss))
-
-                    trainWriter.add_summary(summary, count)
-
-                    if keyboard.is_pressed('#'):
-                        print('Exiting training early...')
-                        break
-
-            saver.save(sess, "Models/" + self._name + ".ckpt")
-
-
+            self._nnModel.export_autokeras_model('Models/' + self._name)
 
 
     def forwardPass(self, inputs : dict):
@@ -134,15 +116,12 @@ class NeuralNet:
         if self.hasTraining() == False:
             print("Can't perform forward pass, as Neural Net has not been trained")
             return {}
+        else:
+            self.loadFromFile()
 
-        tf.reset_default_graph()
+        # TODO: Correct Shape
+        inputs = np.asarray(Utility.mapDataOneWayDictRev(inputs, self._inputMapping))
+        inputs = inputs.reshape((1, 28, 28, 3))
 
-        self.createGraph()
-
-        saver = tf.train.Saver()
-
-        with tf.Session() as sess:
-            saver.restore(sess, "Models/" + self._name + ".ckpt") 
-
-            results = sess.run(self._nnFullTensor , feed_dict ={self._nnX : [Utility.mapDataOneWayDictRev(inputs, self._inputMapping)], self._nnDropOutRate : 1.0}) 
-            return Utility.mapDataOneWayRev(results[0], self._outputMapping)        # Attribute - Value
+        results = self._nnModel.predict(inputs)
+        return Utility.mapDataOneWayRev(results, self._outputMapping)        # Attribute - Value

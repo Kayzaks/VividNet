@@ -94,6 +94,23 @@ class ShapesRenderer:
         attributePool.createType("R-Color", AttributeLexical.Adjective)
         attributePool.createType("G-Color", AttributeLexical.Adjective)
         attributePool.createType("B-Color", AttributeLexical.Adjective)
+        
+        # Shading
+        # TODO: Transmit as "Metallic", etc
+        attributePool.createType("Diffuse-Power",     AttributeLexical.NonTransmit)
+        attributePool.createType("Diffuse-R-Color",   AttributeLexical.NonTransmit)
+        attributePool.createType("Diffuse-G-Color",   AttributeLexical.NonTransmit)
+        attributePool.createType("Diffuse-B-Color",   AttributeLexical.NonTransmit)
+        attributePool.createType("Specular-Exponent", AttributeLexical.NonTransmit)
+        attributePool.createType("Specular-Power",    AttributeLexical.NonTransmit)
+        attributePool.createType("Specular-R-Color",  AttributeLexical.NonTransmit)
+        attributePool.createType("Specular-G-Color",  AttributeLexical.NonTransmit)
+        attributePool.createType("Specular-B-Color",  AttributeLexical.NonTransmit)
+        attributePool.createType("Fresnel-Exponent",  AttributeLexical.NonTransmit)
+        attributePool.createType("Ambient-Power",     AttributeLexical.NonTransmit)
+        attributePool.createType("Ambient-R-Color",   AttributeLexical.NonTransmit)
+        attributePool.createType("Ambient-G-Color",   AttributeLexical.NonTransmit)
+        attributePool.createType("Ambient-B-Color",   AttributeLexical.NonTransmit)
 
 
     def createAttributesForShape(self, shape : Shapes, capsule : Capsule, attributePool : AttributePool):
@@ -133,6 +150,22 @@ class ShapesRenderer:
         capsule.createAttribute("R-Color", attributePool)
         capsule.createAttribute("G-Color", attributePool)
         capsule.createAttribute("B-Color", attributePool)
+
+        # Shading
+        capsule.createAttribute("Diffuse-Power",     attributePool)
+        capsule.createAttribute("Diffuse-R-Color",   attributePool)
+        capsule.createAttribute("Diffuse-G-Color",   attributePool)
+        capsule.createAttribute("Diffuse-B-Color",   attributePool)
+        capsule.createAttribute("Specular-Exponent", attributePool)
+        capsule.createAttribute("Specular-Power",    attributePool)
+        capsule.createAttribute("Specular-R-Color",  attributePool)
+        capsule.createAttribute("Specular-G-Color",  attributePool)
+        capsule.createAttribute("Specular-B-Color",  attributePool)
+        capsule.createAttribute("Fresnel-Exponent",  attributePool)
+        capsule.createAttribute("Ambient-Power",     attributePool)
+        capsule.createAttribute("Ambient-R-Color",   attributePool)
+        capsule.createAttribute("Ambient-G-Color",   attributePool)
+        capsule.createAttribute("Ambient-B-Color",   attributePool)
 
 
     def getLambdaGInputMap(self, shape : Shapes, capsule : Capsule):
@@ -175,13 +208,29 @@ class ShapesRenderer:
         mapIdxAttr[43] = capsule.getAttributeByName("G-Color")
         mapIdxAttr[44] = capsule.getAttributeByName("B-Color")
 
+        # Shading
+        mapIdxAttr[45] = capsule.getAttributeByName("Diffuse-Power")
+        mapIdxAttr[46] = capsule.getAttributeByName("Diffuse-R-Color")
+        mapIdxAttr[47] = capsule.getAttributeByName("Diffuse-G-Color")
+        mapIdxAttr[48] = capsule.getAttributeByName("Diffuse-B-Color")
+        mapIdxAttr[49] = capsule.getAttributeByName("Specular-Exponent")
+        mapIdxAttr[50] = capsule.getAttributeByName("Specular-Power")
+        mapIdxAttr[51] = capsule.getAttributeByName("Specular-R-Color")
+        mapIdxAttr[52] = capsule.getAttributeByName("Specular-G-Color")
+        mapIdxAttr[53] = capsule.getAttributeByName("Specular-B-Color")
+        mapIdxAttr[54] = capsule.getAttributeByName("Fresnel-Exponent")
+        mapIdxAttr[55] = capsule.getAttributeByName("Ambient-Power")
+        mapIdxAttr[56] = capsule.getAttributeByName("Ambient-R-Color")
+        mapIdxAttr[57] = capsule.getAttributeByName("Ambient-G-Color")
+        mapIdxAttr[58] = capsule.getAttributeByName("Ambient-B-Color")
+
         for key, value in mapIdxAttr.items():
             mapAttrIdx[value] = key
 
         return (mapIdxAttr, mapAttrIdx)
 
     def renderInputGenerator(self, shape : Shapes, width : int, height : int):
-        outList = np.random.rand(45)
+        outList = np.random.rand(59)
 
         # Fixate Randoms or correlate those that should
 
@@ -191,7 +240,7 @@ class ShapesRenderer:
         outList[8] = 0.0
 
         # Current shapes have uniform size larger than 0.2
-        outList[3] = min(outList[3], 0.2)
+        outList[3] = max(outList[3], 0.2)
         outList[4] = outList[3]
         outList[5] = outList[3]
 
@@ -218,12 +267,20 @@ class ShapesRenderer:
         # 40-42 -> Light Color              = Light-*-Color
         # 43-45 -> Light Direction          = Light-*-Dir
         # 46-48 -> Color                    = *-Color
+        # 49    -> Diffuse Power            = Diffuse-Power
+        # 50-52 -> Diffuse Color            = Diffuse-*-Color
+        # 53    -> Specular Exponent        = Specular-Exponent
+        # 54    -> Specular Power           = Specular-Power
+        # 55-57 -> Specular Color           = Specular-*-Color
+        # 58    -> Fresnel Exponent         = Fresnel-Exponent
+        # 59    -> Ambient Power            = Ambient-Power
+        # 60-62 -> Ambient Color            = Ambient-*-Color
 
-        transferAttributes = np.empty(49, dtype=np.float32)
+        transferAttributes = np.empty(63, dtype=np.float32)
 
         transferAttributes[0] = float(int(shape))
 
-        for index in range(45):
+        for index in range(len(attributes)):
             transferAttributes[index + 4] = attributes[index]
 
         # These strange axis assignments are due to differing coordinate systems
@@ -239,10 +296,16 @@ class ShapesRenderer:
             transferAttributes[index] = ( transferAttributes[index] - 0.5 ) * 4.0
 
         # 360° Lighting
-        transferAttributes[43] = transferAttributes[43] - 0.5
-        transferAttributes[44] = transferAttributes[44] - 0.5
-        transferAttributes[45] = transferAttributes[45] - 0.5
-    
+        length = np.linalg.norm([transferAttributes[43] - 0.5, transferAttributes[44] - 0.5, transferAttributes[45] - 0.5])
+        transferAttributes[43] = (transferAttributes[43] - 0.5) / length
+        transferAttributes[44] = (transferAttributes[44] - 0.5) / length
+        transferAttributes[45] = (transferAttributes[45] - 0.5) / length
+
+        # Shading        
+        transferAttributes[49] = transferAttributes[49] * 2.0
+        transferAttributes[53] = transferAttributes[53] * transferAttributes[53] * 100.0
+        transferAttributes[54] = transferAttributes[54] * 10.0
+        transferAttributes[58] = transferAttributes[58] * 1.3
 
 
       
