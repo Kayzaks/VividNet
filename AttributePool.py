@@ -7,26 +7,29 @@ from Attribute import Attribute
 class AttributePool:
 
     def __init__(self):
-        self._pool : dict = dict() # AttributeType - AttributeType
+        self._pool  : dict = dict() # AttributeType - AttributeList
+        self._names : dict = dict() # AttributeName - AttributeType
 
 
     def createType(self, attributeName : str, attributeLexical : AttributeLexical):
-        if self.getTypeByName(attributeName) is not None:
-            print("AttributeType named " + attributeName + " already exists!")
+        if attributeName in self._names:
+            print("AttributeType named " + attributeName + " already exists")
             return False
         else:
-            self._pool[AttributeType(attributeName, attributeLexical)] = []
+            currentType = AttributeType(attributeName, attributeLexical)
+            self._pool[currentType] = []
+            self._names[attributeName] = currentType
             return True
 
 
     def createAttribute(self, attributeName : str = None):
-        currentType = self.getTypeByName(attributeName)
-        if currentType is not None:
-            self._pool[currentType].append(Attribute(currentType))
-            return self._pool[currentType][-1]
-        else:
+        if attributeName not in self._names:
             print("No AttributeType named " + attributeName + " exists in the pool")
             return None
+        else:
+            currentType = self._names[attributeName]
+            self._pool[currentType].append(Attribute(currentType))
+            return self._pool[currentType][-1]
             
 
     def destroyAttribute(self, attribute: Attribute):
@@ -42,7 +45,3 @@ class AttributePool:
             print(attribute)
 
         return False
-
-
-    def getTypeByName(self, attributeName : str):
-        return next( (x for x in self._pool if x.getName() == attributeName), None)

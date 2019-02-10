@@ -12,7 +12,6 @@ from AttributePool import AttributePool
 from Attribute import Attribute
 from AttributeType import AttributeLexical
 
-
 class Shapes(Enum):
     Box         = 0
     Sphere      = 1
@@ -25,6 +24,7 @@ class ShapesRenderer:
 
     def __init__(self):
         self._x = 0
+        self._DCTDimension = 5
 
     def setPixelLayerAttributePool(self, attributePool : AttributePool, width : int, height : int):
         for xx in range(width):
@@ -73,13 +73,6 @@ class ShapesRenderer:
         attributePool.createType("Y-Pos", AttributeLexical.Preposition)
         attributePool.createType("Z-Pos", AttributeLexical.Preposition)
 
-        # Background
-        for uu in range(3):
-            for vv in range(3):
-                attributePool.createType("DCTR-" + str(uu) + "-" + str(vv), AttributeLexical.NonTransmit)
-                attributePool.createType("DCTG-" + str(uu) + "-" + str(vv), AttributeLexical.NonTransmit)
-                attributePool.createType("DCTB-" + str(uu) + "-" + str(vv), AttributeLexical.NonTransmit)
-
         # Lighting
         attributePool.createType("Light-R-Color", AttributeLexical.NonTransmit)
         attributePool.createType("Light-G-Color", AttributeLexical.NonTransmit)
@@ -106,12 +99,19 @@ class ShapesRenderer:
         attributePool.createType("Specular-R-Color",  AttributeLexical.NonTransmit)
         attributePool.createType("Specular-G-Color",  AttributeLexical.NonTransmit)
         attributePool.createType("Specular-B-Color",  AttributeLexical.NonTransmit)
-        attributePool.createType("Fresnel-Exponent",  AttributeLexical.NonTransmit)
+        attributePool.createType("View-Exponent",     AttributeLexical.NonTransmit)
         attributePool.createType("Ambient-Power",     AttributeLexical.NonTransmit)
         attributePool.createType("Ambient-R-Color",   AttributeLexical.NonTransmit)
         attributePool.createType("Ambient-G-Color",   AttributeLexical.NonTransmit)
         attributePool.createType("Ambient-B-Color",   AttributeLexical.NonTransmit)
+        attributePool.createType("Reflection-Power",  AttributeLexical.NonTransmit)
 
+        for uu in range(self._DCTDimension):
+            for vv in range(self._DCTDimension):
+                attributePool.createType("DCTR-" + str(uu) + "-" + str(vv), AttributeLexical.NonTransmit)
+                attributePool.createType("DCTG-" + str(uu) + "-" + str(vv), AttributeLexical.NonTransmit)
+                attributePool.createType("DCTB-" + str(uu) + "-" + str(vv), AttributeLexical.NonTransmit)
+                attributePool.createType("ReflectDCT-" + str(uu) + "-" + str(vv),  AttributeLexical.NonTransmit)
 
     def createAttributesForShape(self, shape : Shapes, capsule : Capsule, attributePool : AttributePool):
         self.setShapeAttributePool(attributePool)
@@ -128,13 +128,6 @@ class ShapesRenderer:
         capsule.createAttribute("X-Pos", attributePool)
         capsule.createAttribute("Y-Pos", attributePool)
         capsule.createAttribute("Z-Pos", attributePool)
-
-        # Background
-        for uu in range(3):
-            for vv in range(3):
-                capsule.createAttribute("DCTR-" + str(uu) + "-" + str(vv), attributePool)
-                capsule.createAttribute("DCTG-" + str(uu) + "-" + str(vv), attributePool)
-                capsule.createAttribute("DCTB-" + str(uu) + "-" + str(vv), attributePool)
 
         # Lighting
         capsule.createAttribute("Light-R-Color", attributePool)
@@ -161,11 +154,20 @@ class ShapesRenderer:
         capsule.createAttribute("Specular-R-Color",  attributePool)
         capsule.createAttribute("Specular-G-Color",  attributePool)
         capsule.createAttribute("Specular-B-Color",  attributePool)
-        capsule.createAttribute("Fresnel-Exponent",  attributePool)
+        capsule.createAttribute("View-Exponent",  attributePool)
         capsule.createAttribute("Ambient-Power",     attributePool)
         capsule.createAttribute("Ambient-R-Color",   attributePool)
         capsule.createAttribute("Ambient-G-Color",   attributePool)
         capsule.createAttribute("Ambient-B-Color",   attributePool)
+        capsule.createAttribute("Reflection-Power",  attributePool)
+        
+        # Background
+        for uu in range(self._DCTDimension):
+            for vv in range(self._DCTDimension):
+                capsule.createAttribute("DCTR-" + str(uu) + "-" + str(vv), attributePool)
+                capsule.createAttribute("DCTG-" + str(uu) + "-" + str(vv), attributePool)
+                capsule.createAttribute("DCTB-" + str(uu) + "-" + str(vv), attributePool)
+                capsule.createAttribute("ReflectDCT-" + str(uu) + "-" + str(vv),  attributePool)
 
 
     def getLambdaGInputMap(self, shape : Shapes, capsule : Capsule):
@@ -184,45 +186,49 @@ class ShapesRenderer:
         mapIdxAttr[7] = capsule.getAttributeByName("Y-Pos")
         mapIdxAttr[8] = capsule.getAttributeByName("Z-Pos")
 
-        # Background
-        index = 0
-        for uu in range(3):
-            for vv in range(3):
-                mapIdxAttr[9  + index] = capsule.getAttributeByName("DCTR-" + str(uu) + "-" + str(vv))
-                mapIdxAttr[18 + index] = capsule.getAttributeByName("DCTG-" + str(uu) + "-" + str(vv))
-                mapIdxAttr[27 + index] = capsule.getAttributeByName("DCTB-" + str(uu) + "-" + str(vv))
-                index = index + 1
-
         # Lighting
-        mapIdxAttr[36] = capsule.getAttributeByName("Light-R-Color")
-        mapIdxAttr[37] = capsule.getAttributeByName("Light-G-Color")
-        mapIdxAttr[38] = capsule.getAttributeByName("Light-B-Color")
+        mapIdxAttr[9] = capsule.getAttributeByName("Light-R-Color")
+        mapIdxAttr[10] = capsule.getAttributeByName("Light-G-Color")
+        mapIdxAttr[11] = capsule.getAttributeByName("Light-B-Color")
 
-        mapIdxAttr[39] = capsule.getAttributeByName("Light-X-Dir") 
-        mapIdxAttr[40] = capsule.getAttributeByName("Light-Y-Dir")
-        mapIdxAttr[41] = capsule.getAttributeByName("Light-Z-Dir")
+        mapIdxAttr[12] = capsule.getAttributeByName("Light-X-Dir") 
+        mapIdxAttr[13] = capsule.getAttributeByName("Light-Y-Dir")
+        mapIdxAttr[14] = capsule.getAttributeByName("Light-Z-Dir")
 
         # Textures      
         # TODO: Correct Textures  
-        mapIdxAttr[42] = capsule.getAttributeByName("R-Color")
-        mapIdxAttr[43] = capsule.getAttributeByName("G-Color")
-        mapIdxAttr[44] = capsule.getAttributeByName("B-Color")
+        mapIdxAttr[15] = capsule.getAttributeByName("R-Color")
+        mapIdxAttr[16] = capsule.getAttributeByName("G-Color")
+        mapIdxAttr[17] = capsule.getAttributeByName("B-Color")
 
         # Shading
-        mapIdxAttr[45] = capsule.getAttributeByName("Diffuse-Power")
-        mapIdxAttr[46] = capsule.getAttributeByName("Diffuse-R-Color")
-        mapIdxAttr[47] = capsule.getAttributeByName("Diffuse-G-Color")
-        mapIdxAttr[48] = capsule.getAttributeByName("Diffuse-B-Color")
-        mapIdxAttr[49] = capsule.getAttributeByName("Specular-Exponent")
-        mapIdxAttr[50] = capsule.getAttributeByName("Specular-Power")
-        mapIdxAttr[51] = capsule.getAttributeByName("Specular-R-Color")
-        mapIdxAttr[52] = capsule.getAttributeByName("Specular-G-Color")
-        mapIdxAttr[53] = capsule.getAttributeByName("Specular-B-Color")
-        mapIdxAttr[54] = capsule.getAttributeByName("Fresnel-Exponent")
-        mapIdxAttr[55] = capsule.getAttributeByName("Ambient-Power")
-        mapIdxAttr[56] = capsule.getAttributeByName("Ambient-R-Color")
-        mapIdxAttr[57] = capsule.getAttributeByName("Ambient-G-Color")
-        mapIdxAttr[58] = capsule.getAttributeByName("Ambient-B-Color")
+        mapIdxAttr[18] = capsule.getAttributeByName("Diffuse-Power")
+        mapIdxAttr[19] = capsule.getAttributeByName("Diffuse-R-Color")
+        mapIdxAttr[20] = capsule.getAttributeByName("Diffuse-G-Color")
+        mapIdxAttr[21] = capsule.getAttributeByName("Diffuse-B-Color")
+        mapIdxAttr[22] = capsule.getAttributeByName("Specular-Exponent")
+        mapIdxAttr[23] = capsule.getAttributeByName("Specular-Power")
+        mapIdxAttr[24] = capsule.getAttributeByName("Specular-R-Color")
+        mapIdxAttr[25] = capsule.getAttributeByName("Specular-G-Color")
+        mapIdxAttr[26] = capsule.getAttributeByName("Specular-B-Color")
+        mapIdxAttr[27] = capsule.getAttributeByName("View-Exponent")
+        mapIdxAttr[28] = capsule.getAttributeByName("Ambient-Power")
+        mapIdxAttr[29] = capsule.getAttributeByName("Ambient-R-Color")
+        mapIdxAttr[30] = capsule.getAttributeByName("Ambient-G-Color")
+        mapIdxAttr[31] = capsule.getAttributeByName("Ambient-B-Color")
+        mapIdxAttr[32] = capsule.getAttributeByName("Reflection-Power")
+        
+
+        # Background
+        index = 0
+        for uu in range(self._DCTDimension):
+            for vv in range(self._DCTDimension):
+                mapIdxAttr[33 + index] = capsule.getAttributeByName("ReflectDCT-" + str(uu) + "-" + str(vv))
+                mapIdxAttr[33 + self._DCTDimension * self._DCTDimension + index] = capsule.getAttributeByName("DCTR-" + str(uu) + "-" + str(vv))
+                mapIdxAttr[33 + self._DCTDimension * self._DCTDimension * 2 + index] = capsule.getAttributeByName("DCTG-" + str(uu) + "-" + str(vv))
+                mapIdxAttr[33 + self._DCTDimension * self._DCTDimension * 3 + index] = capsule.getAttributeByName("DCTB-" + str(uu) + "-" + str(vv))
+                index = index + 1
+
 
         for key, value in mapIdxAttr.items():
             mapAttrIdx[value] = key
@@ -230,7 +236,7 @@ class ShapesRenderer:
         return (mapIdxAttr, mapAttrIdx)
 
     def renderInputGenerator(self, shape : Shapes, width : int, height : int):
-        outList = np.random.rand(59)
+        outList = np.random.rand(33 + self._DCTDimension * self._DCTDimension * 4)
 
         # Fixate Randoms or correlate those that should
 
@@ -239,17 +245,29 @@ class ShapesRenderer:
         outList[7] = 0.0
         outList[8] = 0.0
 
+        if (shape == Shapes.Sphere):
+            # Ignore the rotation of a sphere
+            outList[0] = 0.0
+            outList[1] = 0.0
+            outList[2] = 0.0
+
+
         # Current shapes have uniform size larger than 0.2
-        outList[3] = max(outList[3], 0.2)
+        outList[3] = min(max(outList[3], 0.5), 0.9)
         outList[4] = outList[3]
         outList[5] = outList[3]
 
         # Test on white light        
-        outList[36] = 1.0
-        outList[37] = 1.0
-        outList[38] = 1.0
+        outList[9] = 1.0
+        outList[10] = 1.0
+        outList[11] = 1.0
 
         return outList
+
+
+    def getModelSplit(self, shape : Shapes):
+        sqDCT = self._DCTDimension * self._DCTDimension
+        return [0, 9, 32, 32 + 1 + sqDCT, 33 + sqDCT * 2, 33 + sqDCT * 3, 33 + sqDCT * 4]
 
 
     def renderShape(self, shape : Shapes, attributes : list, width : int, height : int, showDebug : bool = False):
@@ -261,22 +279,24 @@ class ShapesRenderer:
         # 4-6   -> Rotation Cos             = cos(*-Rot)
         # 7-9   -> Size                     = *-Size
         # 10-12 -> Position                 = *-Pos
-        # 13-21 -> DCTR[0,0] - DCTR[2,2]    = DCTR-*-*
-        # 22-30 -> DCTG[0,0] - DCTG[2,2]    = DCTG-*-*
-        # 31-39 -> DCTB[0,0] - DCTB[2,2]    = DCTB-*-*
-        # 40-42 -> Light Color              = Light-*-Color
-        # 43-45 -> Light Direction          = Light-*-Dir
-        # 46-48 -> Color                    = *-Color
-        # 49    -> Diffuse Power            = Diffuse-Power
-        # 50-52 -> Diffuse Color            = Diffuse-*-Color
-        # 53    -> Specular Exponent        = Specular-Exponent
-        # 54    -> Specular Power           = Specular-Power
-        # 55-57 -> Specular Color           = Specular-*-Color
-        # 58    -> Fresnel Exponent         = Fresnel-Exponent
-        # 59    -> Ambient Power            = Ambient-Power
-        # 60-62 -> Ambient Color            = Ambient-*-Color
+        # 13-15 -> Light Color              = Light-*-Color
+        # 16-18 -> Light Direction          = Light-*-Dir
+        # 19-21 -> Color                    = *-Color
+        # 22    -> Diffuse Power            = Diffuse-Power
+        # 23-25 -> Diffuse Color            = Diffuse-*-Color
+        # 26    -> Specular Exponent        = Specular-Exponent
+        # 27    -> Specular Power           = Specular-Power
+        # 28-30 -> Specular Color           = Specular-*-Color
+        # 31    -> View Exponent            = View-Exponent
+        # 32    -> Ambient Power            = Ambient-Power
+        # 33-35 -> Ambient Color            = Ambient-*-Color
+        # 36    -> Reflection Power         = Reflection-Power
+        # 37+   -> Reflect DCT[0,0]-[2,2]   = ReflectDCT-*-*
+        #       -> DCTR[0,0] - DCTR[2,2]    = DCTR-*-*
+        #       -> DCTG[0,0] - DCTG[2,2]    = DCTG-*-*
+        #       -> DCTB[0,0] - DCTB[2,2]    = DCTB-*-*
 
-        transferAttributes = np.empty(63, dtype=np.float32)
+        transferAttributes = np.empty(len(attributes) + 4, dtype=np.float32)
 
         transferAttributes[0] = float(int(shape))
 
@@ -288,24 +308,36 @@ class ShapesRenderer:
         transferAttributes[4] = math.cos(math.pi * 0.5 * attributes[2])
         transferAttributes[2] = math.sin(math.pi * 0.5 * attributes[1])
         transferAttributes[5] = math.cos(math.pi * 0.5 * attributes[1])
-        transferAttributes[3] = math.sin(math.pi * 0.5 * (attributes[0] - 0.5))
-        transferAttributes[6] = math.cos(math.pi * 0.5 * (attributes[0] - 0.5))
+        transferAttributes[3] = math.sin(math.pi * 0.5 * attributes[0])
+        transferAttributes[6] = math.cos(math.pi * 0.5 * attributes[0])
         
-        # allow DCT's to be negative
-        for index in range(13, 40):
-            transferAttributes[index] = ( transferAttributes[index] - 0.5 ) * 4.0
-
         # 360° Lighting
-        length = np.linalg.norm([transferAttributes[43] - 0.5, transferAttributes[44] - 0.5, transferAttributes[45] - 0.5])
-        transferAttributes[43] = (transferAttributes[43] - 0.5) / length
-        transferAttributes[44] = (transferAttributes[44] - 0.5) / length
-        transferAttributes[45] = (transferAttributes[45] - 0.5) / length
+        length = np.linalg.norm([transferAttributes[16] - 0.5, transferAttributes[17] - 0.5, transferAttributes[18] - 0.5])
+        transferAttributes[16] = (transferAttributes[16] - 0.5) / length
+        transferAttributes[17] = (transferAttributes[17] - 0.5) / length
+        transferAttributes[18] = (transferAttributes[18] - 0.5) / length
 
         # Shading        
-        transferAttributes[49] = transferAttributes[49] * 2.0
-        transferAttributes[53] = transferAttributes[53] * transferAttributes[53] * 100.0
-        transferAttributes[54] = transferAttributes[54] * 10.0
-        transferAttributes[58] = transferAttributes[58] * 1.3
+        transferAttributes[22] = transferAttributes[22] * 10.0
+        transferAttributes[26] = transferAttributes[26] * 100.0
+        transferAttributes[27] = transferAttributes[27] * 1.0
+        transferAttributes[31] = transferAttributes[31] * 1.0
+        transferAttributes[32] = transferAttributes[32] * 2.0
+        
+
+
+        # allow DCT's to be negative and in the range of -2048 to 2048 for the lowest frequency
+        index = 0
+        for uu in range(self._DCTDimension):
+            for vv in range(self._DCTDimension):
+                intensity = (1024.0 / math.pow(2, max(uu, vv)))
+
+                # R,G,B,Reflection
+                for colorIndex in range(4):
+                    offset = 37 + colorIndex * self._DCTDimension * self._DCTDimension
+                    transferAttributes[index + offset] = (transferAttributes[index + offset] - 0.5) * intensity
+ 
+                index = index + 1
 
 
       
@@ -316,7 +348,7 @@ class ShapesRenderer:
         blockspergrid = (width * height + (threadsperblock - 1)) // threadsperblock
 
         start = time.time()
-        mainRender[blockspergrid, threadsperblock](data, width, height, deviceAttributes)
+        mainRender[blockspergrid, threadsperblock](data, width, height, deviceAttributes, self._DCTDimension)
         end = time.time()
 
         if showDebug is True:

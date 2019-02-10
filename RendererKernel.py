@@ -2,6 +2,7 @@ import math
 from numba import cuda, float32, int32
 
 
+
 @cuda.jit('void(float32[:], float32[:], float32[:])', device=True)
 def crossProduct(vecOut, vec1, vec2):
     vecOut[0] = vec1[1] * vec2[2] - vec1[2] * vec2[1]
@@ -18,7 +19,7 @@ def vecNorm(vec1):
     return math.sqrt(vec1[0] * vec1[0] + vec1[1] * vec1[1] + vec1[2] * vec1[2])
 
 @cuda.jit('void(float32[:], float32[:], float32[:])', device=True)
-def reflect(outVec, incident, normal):
+def reflectVector(outVec, incident, normal):
     dx = dotProduct(incident, normal)
     outVec[0] = incident[0] - 2.0 * dx * normal[0]
     outVec[1] = incident[1] - 2.0 * dx * normal[1]
@@ -148,7 +149,7 @@ def worldMap(result, position, attributes):
     if attributes[0] < 0.5:
         result[0] = sdBox(vec3d, 0.3 * attributes[7], 0.3 * attributes[8], 0.3 * attributes[9])
     elif attributes[0] < 1.5:
-        result[0] = sdSphere(vec3d, 0.5 * attributes[7])
+        result[0] = sdSphere(vec3d, 0.35 * attributes[7])
 
     result[1] = 2.0
 
@@ -283,22 +284,49 @@ def calcAO(position, normal, attributes):
 
 
 
-
-@cuda.jit('void(float32[:], float32, float32, float32[:,:], float32[:,:], float32[:,:])', device=True)
-def drawDCT(color, XX, YY, FR, FG, FB):
+@cuda.jit('float32(float32, float32, float32[:,:], int32)', device=True)
+def drawDCTGrey(XX, YY, FF, dctDim):
     
+    # 3x3 DCT 
+    currentCol = 0.0
+
+    color = 0.0
+    
+    fDctDim = float32(dctDim)
+
+    for uu in range(3):
+        for vv in range(3):
+
+            currentCol = FF[uu, vv] * math.cos((2.0 * XX + 1.0) * float32(uu) * math.pi / (fDctDim * 2.0)) * math.cos((2.0 * YY + 1.0) * float32(vv) * math.pi / (fDctDim * 2.0))
+            
+            if vv == 0:
+                currentCol = currentCol * 0.707107 
+            if uu == 0:
+                currentCol = currentCol * 0.707107 
+
+            color = color + currentCol
+
+    return ((color * 2.0 / fDctDim) + 128.0) / 256.0
+
+
+@cuda.jit('void(float32[:], float32, float32, float32[:,:], float32[:,:], float32[:,:], int32)', device=True)
+def drawDCTRGB(color, XX, YY, FR, FG, FB, dctDim):
+    
+    # 3x3 DCT 
     currentCol = cuda.local.array(shape=3, dtype=float32)
 
     color[0] = 0.0
     color[1] = 0.0
     color[2] = 0.0
 
-    for uu in range(3):
-        for vv in range(3):
+    fDctDim = float32(dctDim)
 
-            currentCol[0] = FR[uu, vv] * math.cos((2.0 * XX + 1.0) * float32(uu) * math.pi / 16.0) * math.cos((2.0 * YY + 1.0) * float32(vv) * math.pi / 16.0)
-            currentCol[1] = FG[uu, vv] * math.cos((2.0 * XX + 1.0) * float32(uu) * math.pi / 16.0) * math.cos((2.0 * YY + 1.0) * float32(vv) * math.pi / 16.0)
-            currentCol[2] = FB[uu, vv] * math.cos((2.0 * XX + 1.0) * float32(uu) * math.pi / 16.0) * math.cos((2.0 * YY + 1.0) * float32(vv) * math.pi / 16.0)
+    for uu in range(dctDim):
+        for vv in range(dctDim):
+
+            currentCol[0] = FR[uu, vv] * math.cos((2.0 * XX + 1.0) * float32(uu) * math.pi / (fDctDim * 2)) * math.cos((2.0 * YY + 1.0) * float32(vv) * math.pi / (fDctDim * 2))
+            currentCol[1] = FG[uu, vv] * math.cos((2.0 * XX + 1.0) * float32(uu) * math.pi / (fDctDim * 2)) * math.cos((2.0 * YY + 1.0) * float32(vv) * math.pi / (fDctDim * 2))
+            currentCol[2] = FB[uu, vv] * math.cos((2.0 * XX + 1.0) * float32(uu) * math.pi / (fDctDim * 2)) * math.cos((2.0 * YY + 1.0) * float32(vv) * math.pi / (fDctDim * 2))
 
             if vv == 0:
                 currentCol[0] = currentCol[0] * 0.707107 
@@ -313,13 +341,13 @@ def drawDCT(color, XX, YY, FR, FG, FB):
             color[1] = color[1] + currentCol[1]
             color[2] = color[2] + currentCol[2]
 
-    color[0] = color[0] / 4.0
-    color[1] = color[1] / 4.0
-    color[2] = color[2] / 4.0
+    color[0] = ((color[0] * 2.0 / fDctDim) + 128.0) / 256.0
+    color[1] = ((color[1] * 2.0 / fDctDim) + 128.0) / 256.0
+    color[2] = ((color[2] * 2.0 / fDctDim) + 128.0) / 256.0
 
 
-@cuda.jit('void(float32[:], float32[:], float32[:], float32[:], float32[:])', device=True)
-def render(color, rayOrigin, rayDirection, result, attributes):
+@cuda.jit('void(float32[:], float32[:], float32[:], float32[:], float32[:], int32)', device=True)
+def render(color, rayOrigin, rayDirection, result, attributes, dctDim):
     
     position = cuda.local.array(shape=3, dtype=float32)
     normal = cuda.local.array(shape=3, dtype=float32)
@@ -327,72 +355,76 @@ def render(color, rayOrigin, rayDirection, result, attributes):
     light = cuda.local.array(shape=3, dtype=float32)
     reflection = cuda.local.array(shape=3, dtype=float32)
     halfAngle = cuda.local.array(shape=3, dtype=float32)
+    F = cuda.local.array(shape=(8, 8), dtype=float32)
     
     castRay(result, rayOrigin, rayDirection, attributes)
 
     if result[1] > -0.5:
+        index = 0
+        for uu in range(dctDim):
+            for vv in range(dctDim):
+                F[uu, vv] = attributes[37 + index]
+                index = index + 1
 
-        color[0] = attributes[46]
-        color[1] = attributes[47]
-        color[2] = attributes[48]
+        color[0] = attributes[19]
+        color[1] = attributes[20]
+        color[2] = attributes[21]
         
         position[0] = rayOrigin[0] + result[0]*rayDirection[0]
         position[1] = rayOrigin[1] + result[0]*rayDirection[1]
         position[2] = rayOrigin[2] + result[0]*rayDirection[2]
         calcNormal(normal, position, attributes)
-        reflect(reflection, rayDirection, normal)
+
+        # Reflection
+        reflectVector(reflection, rayDirection, normal)
+        normalize(reflection, reflection)
+        reflect = drawDCTGrey((reflection[0] ) * 2.0 + 1.0, (reflection[1]) *2.0 + 1.0, F, dctDim)
+
              
         # Ambient Occlusion
         occ = calcAO( position, normal, attributes )
 
         ## Lighting 
-        light[0] = attributes[43]
-        light[1] = attributes[44]
-        light[2] = attributes[45]
-
-        # Ambient
-        ambient = clip( 0.5 + 0.5*normal[1], 0.0, 1.0 )
+        light[0] = attributes[16]
+        light[1] = attributes[17]
+        light[2] = attributes[18]
 
         # Diffuse - Lambertian
         diffuse = clip( dotProduct( normal, light ), 0.0, 1.0 )
-        diffuse *= calcSoftshadow( position, light, 0.02, 2.5, attributes )
+        #diffuse *= calcSoftshadow( position, light, 0.02, 2.5, attributes )
         
         # Specular - Blinn-Phong
         halfAngle[0] = light[0] - rayDirection[0]
         halfAngle[1] = light[1] - rayDirection[1]
         halfAngle[2] = light[2] - rayDirection[2]
         normalize(halfAngle, halfAngle)
-        specular = pow( clip( dotProduct( normal, halfAngle ), 0.0, 1.0 ), attributes[53]) # * diffuse * (0.04 + 0.96 * pow( clip(1.0+dotProduct(halfAngle, rayDirection),0.0,1.0), 25.0 ))
+        specular = pow( clip( dotProduct( normal, halfAngle ), 0.0, 1.0 ), attributes[26])# * diffuse * (0.04 + 0.96 * pow( clip(1.0+dotProduct(halfAngle, rayDirection),0.0,1.0), 25.0 ))
        
-        # Fresnel
-        halfAngle[0] = -light[0]
-        halfAngle[1] = 0.0
-        halfAngle[2] = -light[2]
-        normalize(halfAngle, halfAngle)
-        fresnel = pow( clip(1.0+dotProduct(normal,rayDirection),0.0,1.0), attributes[58] )
+        # View based Shading
+        viewshade = pow( abs(dotProduct(normal, rayDirection)), attributes[31] )
 
         #        Diffuse Power              Diffuse Color    Light Color
-        lin[0] = attributes[49] * diffuse * attributes[50] * attributes[40]
-        lin[1] = attributes[49] * diffuse * attributes[51] * attributes[41]
-        lin[2] = attributes[49] * diffuse * attributes[52] * attributes[42]
+        lin[0] = attributes[22] * diffuse * attributes[23] * attributes[13]
+        lin[1] = attributes[22] * diffuse * attributes[24] * attributes[14]
+        lin[2] = attributes[22] * diffuse * attributes[25] * attributes[15]
 
-        
-        #         Ambient Power              Ambient Color
-        lin[0] += attributes[59] * ambient * attributes[60] * occ
-        lin[1] += attributes[59] * ambient * attributes[61] * occ
-        lin[2] += attributes[59] * ambient * attributes[62] * occ
+        #         Ambient Power    Ambient Color
+        lin[0] += attributes[32] * attributes[33] * occ
+        lin[1] += attributes[32] * attributes[34] * occ
+        lin[2] += attributes[32] * attributes[35] * occ
 
-        lin[0] += 0.25 * fresnel * 1.00 * occ
-        lin[1] += 0.25 * fresnel * 1.00 * occ
-        lin[2] += 0.25 * fresnel * 1.00 * occ
+        lin[0] += attributes[36] * reflect * occ
+        lin[1] += attributes[36] * reflect * occ
+        lin[2] += attributes[36] * reflect * occ
         
-        color[0] = color[0] * lin[0]
-        color[1] = color[1] * lin[1]
-        color[2] = color[2] * lin[2]
+        color[0] = color[0] * lin[0] * viewshade
+        color[1] = color[1] * lin[1] * viewshade
+        color[2] = color[2] * lin[2] * viewshade
+
         #           Specular Power              Specular Color   Light Color
-        color[0] += attributes[54] * specular * attributes[55] * attributes[40] 
-        color[1] += attributes[54] * specular * attributes[56] * attributes[41]
-        color[2] += attributes[54] * specular * attributes[57] * attributes[42]
+        color[0] += attributes[27] * specular * attributes[28] * attributes[13] 
+        color[1] += attributes[27] * specular * attributes[29] * attributes[14]
+        color[2] += attributes[27] * specular * attributes[30] * attributes[15]
 
         dx = 1.0-math.exp( -0.0002*result[0]*result[0]*result[0] )
         color[0] = mix( color[0], 0.8, dx )
@@ -408,7 +440,7 @@ def render(color, rayOrigin, rayDirection, result, attributes):
 
 
 @cuda.jit
-def mainRender(io_array, width, height, attributes):
+def mainRender(io_array, width, height, attributes, dctDim):
     offset = cuda.threadIdx.x + cuda.blockIdx.x * cuda.blockDim.x
 
     miscVec1 = cuda.local.array(shape=3, dtype=float32)
@@ -422,9 +454,9 @@ def mainRender(io_array, width, height, attributes):
     rayDirection = cuda.local.array(shape=3, dtype=float32)
     cameraToWorld = cuda.local.array(shape=(3,3), dtype=float32)
     resultVec = cuda.local.array(shape=2, dtype=float32)
-    FR = cuda.local.array(shape=(3,3), dtype=float32)
-    FG = cuda.local.array(shape=(3,3), dtype=float32)
-    FB = cuda.local.array(shape=(3,3), dtype=float32)
+    FR = cuda.local.array(shape=(8, 8), dtype=float32)
+    FG = cuda.local.array(shape=(8, 8), dtype=float32)
+    FB = cuda.local.array(shape=(8, 8), dtype=float32)
 
     totalColor[0] = 0.0
     totalColor[1] = 0.0
@@ -435,35 +467,13 @@ def mainRender(io_array, width, height, attributes):
     xx = offset / height
     yy = offset % height    
     
-    FR[0,0] = attributes[13] * 1.0
-    FR[0,1] = attributes[14] * 1.0
-    FR[0,2] = attributes[15] * 1.0
-    FR[1,0] = attributes[16] * 1.0
-    FR[1,1] = attributes[17] * 1.0
-    FR[1,2] = attributes[18] * 1.0
-    FR[2,0] = attributes[19] * 1.0
-    FR[2,1] = attributes[20] * 1.0
-    FR[2,2] = attributes[21] * 1.0
-    
-    FG[0,0] = attributes[22] * 1.0
-    FG[0,1] = attributes[23] * 1.0
-    FG[0,2] = attributes[24] * 1.0
-    FG[1,0] = attributes[25] * 1.0
-    FG[1,1] = attributes[26] * 1.0
-    FG[1,2] = attributes[27] * 1.0
-    FG[2,0] = attributes[28] * 1.0
-    FG[2,1] = attributes[29] * 1.0
-    FG[2,2] = attributes[30] * 1.0
-
-    FB[0,0] = attributes[31] * 1.0
-    FB[0,1] = attributes[32] * 1.0
-    FB[0,2] = attributes[33] * 1.0
-    FB[1,0] = attributes[34] * 1.0
-    FB[1,1] = attributes[35] * 1.0
-    FB[1,2] = attributes[36] * 1.0
-    FB[2,0] = attributes[37] * 1.0
-    FB[2,1] = attributes[38] * 1.0
-    FB[2,2] = attributes[39] * 1.0
+    index = 0
+    for uu in range(dctDim):
+        for vv in range(dctDim):
+            FR[uu, vv] = attributes[37 + dctDim * dctDim + index]
+            FG[uu, vv] = attributes[37 + dctDim * dctDim * 2 + index]
+            FB[uu, vv] = attributes[37 + dctDim * dctDim * 3 + index]
+            index = index + 1
     
     for m in range(AA):
         for n in range(AA):
@@ -484,7 +494,7 @@ def mainRender(io_array, width, height, attributes):
 
             # camera position
             rayOrigin[0] = 0.0
-            rayOrigin[1] = 2.5
+            rayOrigin[1] = 1.01
             rayOrigin[2] = -1.5
             
             # camera look at
@@ -499,10 +509,10 @@ def mainRender(io_array, width, height, attributes):
             matMul(rayDirection, cameraToWorld, miscVec1)
 
             # DCT Colors
-            drawDCT(color, float32(xx * 8) / float32(width), float32(yy * 8) / float32(height), FR, FG, FB)
+            drawDCTRGB(color, float32(xx * dctDim) / float32(width), float32(yy * dctDim) / float32(height), FR, FG, FB, dctDim)
 
             # render    
-            render(color, rayOrigin, rayDirection, resultVec, attributes)
+            render(color, rayOrigin, rayDirection, resultVec, attributes, dctDim)
 
             # gamma
             totalColor[0] += pow(color[0], 0.4545)

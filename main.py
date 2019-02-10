@@ -45,25 +45,30 @@ if __name__ == '__main__':
 
 
     testNN = NeuralNet(outMapAttrIdx, inMapAttrIdx, "SphereModel", False)
-    testNN.trainFromData(sphereCapsule._routes[0]._memory, False)
+    testNN.setModelSplit(renderer.getModelSplit(Shapes.Sphere))
+    testNN.trainFromData(sphereCapsule._routes[0]._memory, False, [4])
 
 
 
     testUI = GraphicsUserInterface()
 
 
-
+    
     from scipy import misc
 
-    image = misc.imread("Tests/CLEVR_2.png")
-    image = np.asarray(image).astype(np.float32).flatten() * (1.0/255.0)
+    for i in range(1, 10):
+        image = misc.imread("Tests/CLEVR_" + str(i) + ".png")
+        image = np.asarray(image).astype(np.float32).flatten() * (1.0/255.0)
 
-    inputs = Utility.mapDataOneWay(image, outMapIdxAttr)
-    outputs = testNN.forwardPass(inputs)
+        inputs = Utility.mapDataOneWay(image, outMapIdxAttr)
+        outputs = testNN.forwardPass(inputs)
+        
+        pixels2 = renderer.renderShape(Shapes.Sphere, Utility.mapDataOneWayDict(outputs, inMapIdxAttr), width, height)
+
+        print(np.dot(image, pixels2) / np.dot(image, image))
+
+        testUI.drawArrayCompare("Real", "Detected", image, pixels2, width, height)
     
-    pixels2 = renderer.renderShape(Shapes.Sphere, Utility.mapDataOneWayDict(outputs, inMapIdxAttr), width, height)
-
-    testUI.drawArrayCompare("Real", "Detected", image, pixels2, width, height)
 
     for i in range(3):
         batchX, batchY = sphereCapsule._routes[0]._memory.nextBatch(1, outMapAttrIdx, inMapAttrIdx)
@@ -76,6 +81,7 @@ if __name__ == '__main__':
 
         print(np.dot(pixels1, pixels2) / np.dot(pixels1, pixels1))
 
+        #testUI.drawArray(pixels1, width, height)
         testUI.drawArrayCompare("Real", "Detected", pixels1, pixels2, width, height)
 
 
