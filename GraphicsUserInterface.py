@@ -18,6 +18,17 @@ class GraphicsUserInterface:
         axarr[0].set_title(title1)
         axarr[1].set_title(title2)
         plt.show()
+        
+    def drawArrayCompare3(self, title1 : str, title2 : str, title3 : str,
+                         pixels1 : list, pixels2 : list, pixels3 : list, width : int, height : int):
+        fig, axarr = plt.subplots(1,3)
+        axarr[0].imshow(numpy.reshape(pixels1, [width, height, 3]))
+        axarr[1].imshow(numpy.reshape(pixels2, [width, height, 3]))
+        axarr[2].imshow(numpy.reshape(pixels3, [width, height, 3]))
+        axarr[0].set_title(title1)
+        axarr[1].set_title(title2)
+        axarr[2].set_title(title3)
+        plt.show()
 
     def createDrawBoard(self, lambdaRunCallback, lambdaCloseCallback, intDimX, intDimY):
 

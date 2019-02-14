@@ -10,39 +10,15 @@ from Utility import Utility
 from pathlib import Path
 from CapsuleMemory import CapsuleMemory
 
+import os
+import keras
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Activation, Flatten, BatchNormalization
+from keras.layers import Conv2D, MaxPooling2D
+from keras import backend
 
-class ImageRegressorN(ImageSupervised):
-
-    def __init__(self, numOutputs : int, augment=None, **kwargs):
-        self._numOutputs = numOutputs
-        super().__init__(augment, **kwargs)
-
-    @property
-    def loss(self):
-        return regression_loss
-
-    @property
-    def metric(self):
-        return MSE
-
-    def get_n_output_node(self):
-        return self._numOutputs
-
-    def transform_y(self, y_train):
-        return y_train
-
-    def inverse_transform_y(self, output):
-        return output.flatten()
-
-    def export_autokeras_model(self, model_file_name):
-        """ Creates and Exports the AutoKeras model to the given filename. """
-        portable_model = PortableImageRegressor(graph=self.cnn.best_model,
-                                                y_encoder=self.y_encoder,
-                                                data_transformer=self.data_transformer,
-                                                resize_params=self.resize_shape,
-                                                path=self.path)
-        pickle_to_file(portable_model, model_file_name)
-
+def rmse(y_true, y_pred):
+	return backend.sqrt(backend.mean(backend.square(y_pred - y_true), axis=-1))
 
 
 class NeuralNet:
@@ -59,6 +35,13 @@ class NeuralNet:
         self._numModels             = 1
         self._nnModel               = [None] * self._numModels
 
+        
+        #backend.set_session(backend.tf.Session(config=backend.tf.ConfigProto( 
+        #    intra_op_parallelism_threads=2, 
+        #    inter_op_parallelism_threads=2,
+        #    allow_soft_placement=True,
+        #    device_count = {'CPU': 2})))
+
         self.loadFromFile()
 
 
@@ -68,25 +51,27 @@ class NeuralNet:
         self._nnModel               = [None] * self._numModels
 
     
-    def hasTraining(self):
-        fpath = Path("Models/" + self._name + "-M0")
+    def hasTraining(self, modelIndex : int = 0):
+        fpath = Path("Models/" + self._name + "-M" + str(modelIndex) + ".h5")
         if fpath.is_file():
             return True
         else:
             return False
 
 
-    def loadFromFile(self):
-        if self.hasTraining():
-            for index in range(self._numModels):
-                self._nnModel[index] = pickle_from_file("Models/" + self._name + "-M" + str(index))
+    def loadFromFile(self):    
+        for index in range(self._numModels):            
+            if self.hasTraining(index):
+                self._nnModel[index] = keras.models.load_model("Models/" + self._name + "-M" + str(index) + ".h5", custom_objects={'rmse' : rmse})
 
 
     def trainFromData(self, trainingData : CapsuleMemory, showDebugOutput : bool = False, onlyTrain : list = None):
         if threading.current_thread() == threading.main_thread():
-            numTrain = 20000 #60000
-            numTest = 1000 #2000 
-            timeLimit = 3*60*60 #60*60*8
+            numTrain = 10000 #20000 # 60000
+            numTest = 500 #2000 
+            batch_size = 4
+            epochs = 10
+            #timeLimit = 3*60*60 #4*60*60 #60*60*8
 
             X_train = None
             Y_train = None
@@ -126,34 +111,84 @@ class NeuralNet:
                 if index > 0:
                     Y_DeltaTrain = np.delete(Y_DeltaTrain, np.s_[0:self._modelSplit[index]], axis=1)
                     Y_DeltaTest = np.delete(Y_DeltaTest, np.s_[0:self._modelSplit[index]], axis=1)
+    
+                self._nnModel[index] = Sequential()
+                
+                self._nnModel[index].add(Conv2D(8, (3, 3), padding='same', input_shape=(28, 28, 3)))
+                self._nnModel[index].add(Activation('tanh'))
+                self._nnModel[index].add(Dropout(0.25))
 
+                self._nnModel[index].add(Flatten())
+                self._nnModel[index].add(Dense(128))
+                self._nnModel[index].add(Activation('tanh'))
+                self._nnModel[index].add(Dropout(0.25))
+                self._nnModel[index].add(Dense(len(Y_DeltaTrain[0])))
+                self._nnModel[index].add(Activation('linear'))
+
+
+
+
+                ''' BEST:
+                
+                learn rate = 0.0001
+                loss = 0.0485
+                val loss = 0.0439
+
+                numTrain = 10000 
+                numTest = 500 
+                batch_size = 4
+                epochs = 10
+                
+                self._nnModel[index].add(Conv2D(8, (3, 3), padding='same', input_shape=(28, 28, 3)))
+                self._nnModel[index].add(Activation('tanh'))
+                self._nnModel[index].add(Dropout(0.25))
+
+                self._nnModel[index].add(Flatten())
+                self._nnModel[index].add(Dense(128))
+                self._nnModel[index].add(Activation('tanh'))
+                self._nnModel[index].add(Dropout(0.25))
+                self._nnModel[index].add(Dense(numAttributes))
+                self._nnModel[index].add(Activation('linear'))
+                '''
+
+
+
+                opt = keras.optimizers.Adam(lr=0.0001)
+
+
+                self._nnModel[index].compile(loss='mean_squared_error',
+                            optimizer=opt,
+                            metrics=[rmse])
+
+                self._nnModel[index].fit(X_train, Y_DeltaTrain,
+                            batch_size=batch_size,
+                            epochs=epochs,
+                            validation_data=(X_test, Y_DeltaTest),
+                            shuffle=True)
+
+
+                self._nnModel[index].save("Models/" + self._name + "-M" + str(index) + ".h5")
+                print("Saved trained model at 'Models/" + self._name + "-M" + str(index) + ".h5'")
+
+                # Score trained model.
+                scores = self._nnModel[index].evaluate(X_test, Y_DeltaTest, verbose=1)
+                print('Test loss:', scores[0])
+                print('Test accuracy:', scores[1])
+
+                '''
                 self._nnModel[index] = ImageRegressorN(len(Y_DeltaTrain[0]), verbose=True, augment=True)
 
                 self._nnModel[index].fit(X_train, Y_DeltaTrain, time_limit=timeLimit)
                 self._nnModel[index].final_fit(X_train, Y_DeltaTrain, X_test, Y_DeltaTest, retrain=False)
 
                 self._nnModel[index].export_autokeras_model('Models/' + self._name + "-M" + str(index))
+                '''
 
-
-            '''
-
-            # TODO: Correct Shape
-            X_train = X_train.reshape((numTrain, 28, 28, 3))
-            X_test = X_test.reshape((numTest, 28, 28, 3))
-
-            self._nnModel = ImageRegressorN(self._numOutputs, verbose=True, augment=True)
-
-            self._nnModel.fit(X_train, Y_train, time_limit=timeLimit)
-            self._nnModel.final_fit(X_train, Y_train, X_test, Y_test, retrain=False)
-
-            
-            self._nnModel.export_autokeras_model('Models/' + self._name)
-            '''
 
 
     def forwardPass(self, inputs : dict):
         # inputs        # Attribute  -  Value
-
+        
         if self.hasTraining() == False:
             print("Can't perform forward pass, as Neural Net has not been trained")
             return {}
@@ -167,6 +202,9 @@ class NeuralNet:
         results = []
 
         for index in range(self._numModels):
-            results = np.append(results, self._nnModel[index].predict(inputs))
+            if self._nnModel[index] is not None:
+                results = np.append(results, self._nnModel[index].predict(inputs))
+            else:
+                results = np.append(results, np.zeros(self._modelSplit[index + 1] - self._modelSplit[index]))
 
-        return Utility.mapDataOneWayRev(results, self._outputMapping)     # Attribute - Value
+        return Utility.mapDataOneWayRev(results, self._outputMapping)    # Attribute - Value
