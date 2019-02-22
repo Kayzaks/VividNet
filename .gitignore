@@ -103,11 +103,11 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# Auto-Keras / Tensorflow stuff
+# Keras / Tensorflow stuff
 logs/
 Models/
 Tests/
 
-
-# Testing stuff
+# Testing and Old stuff
 XTest.py
+Old/

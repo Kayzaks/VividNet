@@ -3,6 +3,9 @@ from AttributePool import AttributePool
 from CapsuleMemory import CapsuleMemory
 from CapsuleRoute import CapsuleRoute
 
+from PrimitivesRenderer import PrimitivesRenderer
+from PrimitivesRenderer import Primitives
+
 class Capsule:
 
     def __init__(self, name : str):
@@ -11,9 +14,23 @@ class Capsule:
         self._routes        : list          = list()  # Route
 
 
-    def addNewRoute(self, fromCapsules : list):
+    def addNewRoute(self, fromCapsules : list, knownGRenderer : PrimitivesRenderer = None, 
+                          knownGPrimitive : Primitives = None):
         numRoutes = len(self._routes)
         newRoute = CapsuleRoute(self, self._name + "-R-" + str(numRoutes), fromCapsules)
+
+        # The known g Render can only be used with one pixel-layer as input
+        if knownGRenderer is not None and len(fromCapsules) == 1:
+            width, height, depth = knownGRenderer.inferDimensionsFromPixelLayer(fromCapsules[0])
+            
+            outMapIdxAttr, outMapAttrIdx = knownGRenderer.getLambdaGOutputMap(fromCapsules[0], width, height)
+            inMapIdxAttr, inMapAttrIdx = knownGRenderer.getLambdaGInputMap(knownGPrimitive, self)
+
+            newRoute.createPrimitiveRoute(inMapAttrIdx, outMapIdxAttr, outMapAttrIdx, inMapIdxAttr,
+                (lambda : knownGRenderer.renderInputGenerator(knownGPrimitive, width, height)), 
+                (lambda attributes: knownGRenderer.renderPrimitive(knownGPrimitive, attributes, width, height)),
+                knownGRenderer.getModelSplit(knownGPrimitive), width, height, depth)
+
         self._routes.append(newRoute)
 
 

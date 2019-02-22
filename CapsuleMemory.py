@@ -118,7 +118,7 @@ class CapsuleMemory:
             for idx in range(batchSize):
                 lyData = self._lambdaYGenerator()
                 lxData = self._lambdaXInferer(lyData)
-                yData[idx] = Utility.mapData(lyData, self._lambdaYMapping, outputMap)
+                yData[idx] = Utility.mapData(lyData, self._lambdaYMapping, outputMap)                
                 xData[idx] = Utility.mapData(lxData, self._lambdaXMapping, inputMap)
         else:
             # Only create True Data + Transformations
