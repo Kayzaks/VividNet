@@ -1,5 +1,6 @@
 import autokeras as ak
 import numpy as np
+from time import time
 from autokeras.nn.loss_function import regression_loss
 from autokeras.image.image_supervised import ImageSupervised, PortableImageRegressor
 from autokeras.nn.metric import Accuracy, MSE
@@ -16,6 +17,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten, BatchNormalization
 from keras.layers import Conv2D, MaxPooling2D
 from keras import backend
+from keras.callbacks import TensorBoard
 
 def rmse(y_true, y_pred):
 	return backend.sqrt(backend.mean(backend.square(y_pred - y_true), axis=-1))
@@ -49,6 +51,8 @@ class NeuralNet:
         self._modelSplit            = modelSplit
         self._numModels             = len(modelSplit) - 1
         self._nnModel               = [None] * self._numModels
+        
+        self.loadFromFile()
 
 
     def setInputShape(self, inputShape : list):
@@ -84,7 +88,7 @@ class NeuralNet:
         return
 
 
-    def trainFromData(self, trainingData : CapsuleMemory, showDebugOutput : bool = False, onlyTrain : list = None):
+    def trainFromData(self, trainingData : CapsuleMemory, showDebugOutput : bool = True, onlyTrain : list = None, retrain : bool = False):
         if threading.current_thread() == threading.main_thread():
             self.beginTraining()
 
@@ -93,6 +97,9 @@ class NeuralNet:
             X_test = None
             Y_test = None
  
+            if showDebugOutput is True:
+                print("Generating Training Set (Train=" + str(self._numTrain) + ", Test=" + str(self._numTest) + ")")
+
             if self._swapInOut is False:
                 X_train, Y_train = trainingData.nextBatch(self._numTrain, self._inputMapping, self._outputMapping)
                 X_test, Y_test = trainingData.nextBatch(self._numTest, self._inputMapping, self._outputMapping)
@@ -100,6 +107,8 @@ class NeuralNet:
                 Y_train, X_train = trainingData.nextBatch(self._numTrain, self._outputMapping, self._inputMapping)
                 Y_test, X_test = trainingData.nextBatch(self._numTest, self._outputMapping, self._inputMapping)
 
+            if showDebugOutput is True:
+                print("Done Generating Training Set")
 
             X_train = np.asarray(X_train)
             X_test = np.asarray(X_test)
@@ -134,8 +143,8 @@ class NeuralNet:
                     Y_DeltaTest = np.delete(Y_DeltaTest, np.s_[0:self._modelSplit[index]], axis=1)
     
 
-
-                self._nnModel[index] = self.defineModel(tuple(trainShape[1:]), len(Y_DeltaTrain[0]))
+                if retrain is True or self.hasTraining(index) is False:
+                    self._nnModel[index] = self.defineModel(tuple(trainShape[1:]), len(Y_DeltaTrain[0]))
 
 
                 opt = keras.optimizers.Adam(lr=0.0001)
@@ -144,11 +153,14 @@ class NeuralNet:
                             optimizer=opt,
                             metrics=[rmse])
 
+                tensorboard = TensorBoard(log_dir="logs/{}".format(time()))
+
                 self._nnModel[index].fit(X_train, Y_DeltaTrain,
                             batch_size=self._batchSize,
                             epochs=self._epochs,
                             validation_data=(X_test, Y_DeltaTest),
-                            shuffle=True)
+                            shuffle=True, 
+                            verbose=1, callbacks=[tensorboard])
 
                 self._nnModel[index].save("Models/" + self._name + "-M" + str(index) + ".h5")
                 print("Saved trained model at 'Models/" + self._name + "-M" + str(index) + ".h5'")

@@ -28,7 +28,7 @@ class Capsule:
 
             newRoute.createPrimitiveRoute(inMapAttrIdx, outMapIdxAttr, outMapAttrIdx, inMapIdxAttr,
                 (lambda : knownGRenderer.renderInputGenerator(knownGPrimitive, width, height)), 
-                (lambda attributes: knownGRenderer.renderPrimitive(knownGPrimitive, attributes, width, height)),
+                (lambda attributes: knownGRenderer.renderPrimitive(knownGPrimitive, attributes, width, height, isTraining=True)),
                 knownGRenderer.getModelSplit(knownGPrimitive), width, height, depth)
 
         self._routes.append(newRoute)

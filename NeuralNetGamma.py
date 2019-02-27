@@ -10,21 +10,32 @@ from keras import backend
 class NeuralNetGamma(NeuralNet):
 
     def beginTraining(self):
-        self.setTrainingParameters(10000, 500, 4, 3)
+        #self.setTrainingParameters(30000, 1000, 4, 30)
+        self.setTrainingParameters(500, 10, 4, 5)
 
 
     def defineModel(self, inputShape : tuple, outputSize : int):
         model = Sequential()
         
-        model.add(Conv2D(8, (3, 3), padding='same', input_shape=inputShape))
-        model.add(Activation('tanh'))
+        model.add(Conv2D(64, (3, 3), activation='relu', input_shape=inputShape))
+        model.add(BatchNormalization())
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+
+        model.add(Conv2D(64, (3, 3), activation='relu'))
+        model.add(BatchNormalization())
+        model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
 
         model.add(Flatten())
-        model.add(Dense(128))
-        model.add(Activation('tanh'))
+
+        model.add(Dense(512, activation='relu'))
+        model.add(BatchNormalization())
         model.add(Dropout(0.25))
-        model.add(Dense(outputSize))
-        model.add(Activation('linear'))
+
+        model.add(Dense(256, activation='relu'))
+        model.add(Dropout(0.25))
+
+        model.add(Dense(outputSize, activation='linear'))
 
         return model

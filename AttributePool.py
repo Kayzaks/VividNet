@@ -13,7 +13,6 @@ class AttributePool:
 
     def createType(self, attributeName : str, attributeLexical : AttributeLexical):
         if attributeName in self._names:
-            print("AttributeType named " + attributeName + " already exists")
             return False
         else:
             currentType = AttributeType(attributeName, attributeLexical)

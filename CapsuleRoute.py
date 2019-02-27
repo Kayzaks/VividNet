@@ -92,11 +92,11 @@ class CapsuleRoute:
 
 
 
-    def retrain(self, specificSplit : list = None):
+    def retrain(self, showDebugOutput = True, specificSplit : list = None):
         if self._isSemanticCapsule is True:
             return
         else:
-            self._neuralNetGamma.trainFromData(self._memory, False, specificSplit)
+            self._neuralNetGamma.trainFromData(self._memory, showDebugOutput, specificSplit)
 
 
 #    def runGammaFunction(self):

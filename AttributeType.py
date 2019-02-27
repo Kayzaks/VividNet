@@ -12,6 +12,7 @@ class AttributeLexical(Enum):
     Pixel       = 10
 
     # Non-Transmitted
+    # -> Will not be inherited by subsequent capsules
     NonTransmit = 20
 
 
