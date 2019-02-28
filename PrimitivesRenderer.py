@@ -141,6 +141,8 @@ class PrimitivesRenderer:
         ## Index must match the one used in the kernel
         # primAttributes[0] = ("Alpha", AttributeLexical.NonTransmit)
 
+        # Has to have "Position-X" and "Position-Y"
+
         # self.setPrimitiveAttributes(Primitives.Unknown, attributePool, primAttributes)
         # self.setKernels({Primitives.Unknown : pythonKernelExample})
         return
@@ -188,6 +190,10 @@ class PrimitivesRenderer:
                 attributePool.createType("PixelY-" + str(xx) + "-" + str(yy), AttributeLexical.Pixel)
                 attributePool.createType("PixelD-" + str(xx) + "-" + str(yy), AttributeLexical.Pixel)
 
+        
+        attributePool.createType("SlidingFilter-X", AttributeLexical.NonTransmit)
+        attributePool.createType("SlidingFilter-Y", AttributeLexical.NonTransmit)
+
 
     def createAttributesForPixelLayer(self, width : int, height : int, capsule, attributePool : AttributePool):
         self.setPixelLayerAttributePool(attributePool, width, height)
@@ -198,7 +204,14 @@ class PrimitivesRenderer:
                 capsule.createAttribute("PixelX-" + str(xx) + "-" + str(yy), attributePool)
                 capsule.createAttribute("PixelY-" + str(xx) + "-" + str(yy), attributePool)
                 capsule.createAttribute("PixelD-" + str(xx) + "-" + str(yy), attributePool)
+                
+        capsule.createAttribute("SlidingFilter-X", attributePool)
+        capsule.createAttribute("SlidingFilter-Y", attributePool)
     
+
+    def getOffsetLabels(self):
+        return "SlidingFilter-X", "SlidingFilter-Y", "Position-X", "Position-Y"
+
 
     def getLambdaGOutputMap(self, capsule, width : int, height : int):
         mapIdxAttr : dict = {}  # Index - Attribute
@@ -225,6 +238,11 @@ class PrimitivesRenderer:
         maxHeight = 0
         pixelTypes = {}
         for attribute in capsule.getAttributes():
+
+            # Ignore Sliding Filter Attributes
+            if attribute.getName().startswith("SlidingFilter"):
+                continue
+
             splits = attribute.getName().split("-")
             pixelTypes[splits[0]] = True
             digits = [int(symbol) for symbol in splits if symbol.isdigit() == True]
@@ -263,7 +281,7 @@ class PrimitivesRenderer:
 
 
     def renderPrimitive(self, primitive : Primitives, attributes : list, width : int, height : int, isTraining : bool = False, altBackground = None, showDebug : bool = False):
-        # Input Attributes as Lambda G Mapping
+        # Input Attributes as Lambda G Mapping (Raw List of values)
 
         transferAttributes = np.asarray(self.processAttributes(copy.copy(attributes)))
 

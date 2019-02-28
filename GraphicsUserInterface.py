@@ -6,15 +6,15 @@ import numpy
 class GraphicsUserInterface:
 
     def drawArray(self, pixels : list, width : int, height : int):
-        plt.imshow(numpy.reshape(pixels, [width, height, 3]))
+        plt.imshow(numpy.reshape(pixels, [height, width, 3]))
         plt.show()
 
         
     def drawArrayCompare(self, title1 : str, title2 : str, 
-                         pixels1 : list, pixels2 : list, width : int, height : int):
+                         pixels1 : list, pixels2 : list, width : int, height : int, width2 : int, height2 : int):
         fig, axarr = plt.subplots(1,2)
-        axarr[0].imshow(numpy.reshape(pixels1, [width, height, 3]))
-        axarr[1].imshow(numpy.reshape(pixels2, [width, height, 3]))
+        axarr[0].imshow(numpy.reshape(pixels1, [height, width, 3]))
+        axarr[1].imshow(numpy.reshape(pixels2, [height2, width2, 3]))
         axarr[0].set_title(title1)
         axarr[1].set_title(title2)
         plt.show()
@@ -22,9 +22,9 @@ class GraphicsUserInterface:
     def drawArrayCompare3(self, title1 : str, title2 : str, title3 : str,
                          pixels1 : list, pixels2 : list, pixels3 : list, width : int, height : int):
         fig, axarr = plt.subplots(1,3)
-        axarr[0].imshow(numpy.reshape(pixels1, [width, height, 3]))
-        axarr[1].imshow(numpy.reshape(pixels2, [width, height, 3]))
-        axarr[2].imshow(numpy.reshape(pixels3, [width, height, 3]))
+        axarr[0].imshow(numpy.reshape(pixels1, [height, width, 3]))
+        axarr[1].imshow(numpy.reshape(pixels2, [height, width, 3]))
+        axarr[2].imshow(numpy.reshape(pixels3, [height, width, 3]))
         axarr[0].set_title(title1)
         axarr[1].set_title(title2)
         axarr[2].set_title(title3)

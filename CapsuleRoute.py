@@ -53,19 +53,22 @@ class CapsuleRoute:
         if self._neuralNetGamma.hasTraining() is False:
             self.retrain()
 
+    def getInputCount(self):
+        return len(self._fromCapsules)
 
     def getFromCapsules(self):
         return self._fromCapsules
 
     def getInputAttributes(self):
         return [item for sublist in [x.getAttributes() for x in self._fromCapsules] for item in sublist]
-        
+                
     def getOutputAttributes(self):
         return self._parentCapsule.getAttributes()
-
+        
     def getInputActivations(self):
         # TODO: Output as dict(Capsule, Probability)
         return {(self._fromCapsules[0], 1.0)}
+
 
 
     def resizeInternals(self):
@@ -136,15 +139,13 @@ class CapsuleRoute:
 
 
     def runGammaFunction(self, attributes : list = None):
-        # TODO: THIS IS FOR TESTING USING RAW NON MAPPED ATTRIBUTES
+        # attributes        # Attribute - Value
         if self._isSemanticCapsule is False:
             if attributes is None:
                 # TODO: Take actual Attributes
                 return [0.0] * len(self._gOutputMapping)
             else:
-                inputs = Utility.mapDataOneWay(attributes, self._gOutputMapping)
-                outputs = self._neuralNetGamma.forwardPass(inputs)
-                return Utility.mapDataOneWayDict(outputs, self._gammaOutputMapping)
+                return self._neuralNetGamma.forwardPass(attributes)
         else:
             return [0.0] * len(self._gOutputMapping)
 

@@ -11,7 +11,7 @@ class NeuralNetGamma(NeuralNet):
 
     def beginTraining(self):
         #self.setTrainingParameters(30000, 1000, 4, 30)
-        self.setTrainingParameters(500, 10, 4, 5)
+        self.setTrainingParameters(50000, 1000, 4, 10)
 
 
     def defineModel(self, inputShape : tuple, outputSize : int):

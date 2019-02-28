@@ -75,17 +75,17 @@ class Utility:
     @staticmethod
     def loadPNGGreyscale(filename : str):
         image = misc.imread(filename, "L")
+        outputShape = image.shape
         image = np.asarray(image).astype(np.float32).flatten() / 255.0
 
-        size = Utility.isqrt(len(image))
-        output = np.zeros(size * size * 4)
+        output = np.zeros(outputShape[0] * outputShape[1] * 4)
 
-        for idx in range(size * size):
+        for idx in range(outputShape[0] * outputShape[1]):
             output[idx * 4] = image[idx]
-            output[idx * 4 + 1] = float(idx % size) / float(size)
-            output[idx * 4 + 2] = float(idx // size) / float(size)
-            output[idx * 4 + 3] = 0.0
+            output[idx * 4 + 1] = image[idx]
+            output[idx * 4 + 2] = image[idx]
+            output[idx * 4 + 3] = image[idx]
 
-        return output 
+        return (output, (outputShape[1], outputShape[0]))
 
         

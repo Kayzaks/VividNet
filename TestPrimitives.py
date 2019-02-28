@@ -75,8 +75,8 @@ def cudaKernelSquare(ioArray, width, height, attributes):
             FF[uu, vv] = attributes[7 + index]
             index = index + 1
 
-    intensity1 = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi)) / attributes[4]
-    intensity2 = (xx - (attributes[0])) * math.sin(-attributes[3] * math.pi)+(yy - (attributes[1])) * math.cos(-attributes[3] * math.pi)
+    intensity1 = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi * 0.5)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi * 0.5)) / attributes[4]
+    intensity2 = (xx - (attributes[0])) * math.sin(-attributes[3] * math.pi * 0.5)+(yy - (attributes[1])) * math.cos(-attributes[3] * math.pi * 0.5)
     intensity1 = abs(intensity1) - attributes[2] * 0.5 
     intensity2 = abs(intensity2) - attributes[2] * 0.5
     intensity =  cudaWindowFunction( max(intensity1, 0.0) + max(intensity2, 0.0) + min(max(intensity1, intensity2),0.0), (attributes[6] * 0.1) + 0.025)
