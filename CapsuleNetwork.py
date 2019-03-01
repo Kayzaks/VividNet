@@ -3,6 +3,8 @@ from Capsule import Capsule
 from PrimitivesRenderer import Primitives
 from Observation import Observation
 
+import copy
+import numpy as np
 
 class CapsuleNetwork:
 
@@ -77,28 +79,85 @@ class CapsuleNetwork:
                                 attributes[capsule.getAttributeByName("PixelC-" + str(xx) + "-" + str(yy))] = image[((yy + offsetY) * width + xx + offsetX) * 4]
                                 attributes[capsule.getAttributeByName("PixelX-" + str(xx) + "-" + str(yy))] = float(xx) / float(filterShape[0])
                                 attributes[capsule.getAttributeByName("PixelY-" + str(xx) + "-" + str(yy))] = float(yy) / float(filterShape[1])
-                                attributes[capsule.getAttributeByName("PixelD-" + str(xx) + "-" + str(yy))] = 0.0
+                                attributes[capsule.getAttributeByName("PixelD-" + str(xx) + "-" + str(yy))] = 1.0
 
-                        attributes[capsule.getAttributeByName("SlidingFilter-X")] = float(offsetX + filterShape[0] / 2) / float(max(width, height))
-                        attributes[capsule.getAttributeByName("SlidingFilter-Y")] = float(offsetY + filterShape[1] / 2) / float(max(width, height))
+                        attributes[capsule.getAttributeByName("SlidingFilter-X")] = float(offsetX) / float(max(width, height))
+                        attributes[capsule.getAttributeByName("SlidingFilter-Y")] = float(offsetY) / float(max(width, height))
+                        attributes[capsule.getAttributeByName("SlidingFilter-X-Ratio")] = float(filterShape[0]) / float(max(width, height))
+                        attributes[capsule.getAttributeByName("SlidingFilter-Y-Ratio")] = float(filterShape[1]) / float(max(width, height))
 
-                        pixelObs = Observation(None, {}, attributes)
+                        pixelObs = Observation(None, {}, attributes, None, 1.0)
                         capsule.addObservation(pixelObs)
 
         print("Forward Pass on all Primitive Capsules")
-        offsetLabelX, offsetLabelY, targetLabelX, targetLabelY = self._renderer.getOffsetLabels()
+        offsetLabelX, offsetLabelY, offsetLabelXRatio, offsetLabelYRatio, targetLabelX, targetLabelY = self._renderer.getOffsetLabels()
+
+        allObs = {}     # Capsule - List Of Observations
 
         for capsule in self._primitiveCapsules:
-
-            # TESTING:
-            return capsule.forwardPass()
-
-
             capsule.forwardPass()
-            capsule.offsetObservations(offsetLabelX, offsetLabelY, targetLabelX, targetLabelY)
+            capsule.cleanupObservations(offsetLabelX, offsetLabelY, offsetLabelXRatio, offsetLabelYRatio, targetLabelX, targetLabelY)
+            allObs[capsule] = capsule.getObservations()
 
 
         for layer in range(self._numSemanticLayers):
             print("Forward Pass on Layer " + str(layer) + " of Semantic Capsules")
             for capsule in self._semanticLayers[layer]:
                 capsule.forwardPass()
+                allObs[capsule] = capsule.getObservations()
+
+        return allObs
+
+        
+
+
+    def generateImage(self, width : int, height : int, observations : dict, withBackground : bool = False):
+        # observations          # Capsule   -   List of Observations
+        
+        obs = copy.copy(observations)
+
+        for layerIndex in range(self._numSemanticLayers - 1, -1, -1):
+            # Iterate the list backwards
+            for capsule in self._semanticLayers[layerIndex]:
+                if capsule in obs:
+                    for observation in obs[capsule]:
+                        newObs = capsule.backwardPass(observation)
+                        for obsCaps, obsList in newObs:
+                            if obsCaps in obs:
+                                obs[obsCaps].extend(obsList)
+                            else:
+                                obs[obsCaps] = obsList
+
+                    # Remove the parsed Observations
+                    del obs[capsule]
+
+        # Order all observations for the primitive capsules
+        capsObsPairs = []
+        for capsule, obsList in obs.items():
+            for observation in obsList:
+                capsObsPairs.append((capsule, observation))
+        capsObsPairs = sorted(capsObsPairs, key=lambda tup: tup[1].getProbability())
+
+        image = np.zeros(width * height * 4)
+
+        for capsule, observation in capsObsPairs:            
+            # TODO: Nicer...
+            # TODO: Get FilterShape
+            xOffset = int(observation.getOutput(capsule.getAttributeByName("Position-X")) * float(max(width, height))) - 14
+            yOffset = int(observation.getOutput(capsule.getAttributeByName("Position-Y")) * float(max(width, height))) - 14
+
+            observation.setOutput(capsule.getAttributeByName("Position-X"), 0.5)
+            observation.setOutput(capsule.getAttributeByName("Position-Y"), 0.5)
+
+            obsPixelLayer = capsule.backwardPass(observation, withBackground)
+
+            pixelObs = list(obsPixelLayer.values())[0]
+            pixelLay = list(obsPixelLayer.keys())[0]
+            for xx in range(28):
+                for yy in range(28):
+                    if xx + xOffset < width and xx + xOffset >= 0 and yy + yOffset < height and yy + yOffset >= 0:
+                        depth = pixelObs.getOutput(pixelLay.getAttributeByName("PixelD-" + str(xx) + "-" + str(yy)))
+                        if withBackground is True or depth < 1.0:
+                            image[((yy + yOffset) * width + xx + xOffset) * 4] = pixelObs.getOutput(pixelLay.getAttributeByName("PixelC-" + str(xx) + "-" + str(yy)))
+
+        return image    # Linear List of Pixels

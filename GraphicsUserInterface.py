@@ -11,9 +11,9 @@ class GraphicsUserInterface:
 
         
     def drawArrayCompare(self, title1 : str, title2 : str, 
-                         pixels1 : list, pixels2 : list, width : int, height : int, width2 : int, height2 : int):
+                         pixels1 : list, pixels2 : list, width1 : int, height1 : int, width2 : int, height2 : int):
         fig, axarr = plt.subplots(1,2)
-        axarr[0].imshow(numpy.reshape(pixels1, [height, width, 3]))
+        axarr[0].imshow(numpy.reshape(pixels1, [height1, width1, 3]))
         axarr[1].imshow(numpy.reshape(pixels2, [height2, width2, 3]))
         axarr[0].set_title(title1)
         axarr[1].set_title(title2)

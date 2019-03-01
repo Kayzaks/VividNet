@@ -6,6 +6,7 @@ from NeuralNetG import NeuralNetG
 from Attribute import Attribute
 from Utility import Utility
 
+from GraphicsUserInterface import GraphicsUserInterface
 class CapsuleRoute:
 
     def __init__(self, parentCapsule, capsuleRouteName : str, fromCapsules : list):
@@ -16,6 +17,7 @@ class CapsuleRoute:
 
         self._gFunctionLambda                        = None 
         self._gammaFunctionLambda                    = None
+        self._agreementFunctionLambda                = None
 
         self._gInputMapping         : dict           = None  # Attribute - Index 
         self._gOutputMapping        : dict           = None  # Index - Attribute
@@ -35,8 +37,8 @@ class CapsuleRoute:
 
     def createPrimitiveRoute(self, gInputMapping : dict, gOutputMapping : dict, 
                                    gammaInputMapping : dict, gammaOutputMapping : dict,
-                                   lambdaGenerator, lambdaRenderer, modelSplit : list,
-                                   width : int, height : int, depth : int):
+                                   lambdaGenerator, lambdaRenderer, lambdaAgreement, 
+                                   modelSplit : list, width : int, height : int, depth : int):
         self._isSemanticCapsule = False
 
         self._gInputMapping = gInputMapping
@@ -45,6 +47,7 @@ class CapsuleRoute:
         self._gammaOutputMapping = gammaOutputMapping
 
         self._memory.setLambdaKnownG(lambdaGenerator, lambdaRenderer, gOutputMapping, gammaOutputMapping)
+        self._agreementFunctionLambda = lambdaAgreement
 
         self._neuralNetGamma = NeuralNetGamma(self._gammaInputMapping, self._gInputMapping, self._name + "-gamma", False)
         self._neuralNetGamma.setModelSplit(modelSplit)
@@ -68,6 +71,19 @@ class CapsuleRoute:
     def getInputActivations(self):
         # TODO: Output as dict(Capsule, Probability)
         return {(self._fromCapsules[0], 1.0)}
+
+
+    def pairInputCapsuleAttributes(self, attributes : dict):
+        # attributes        # Attribute - Value
+        # We mostly work with {Attribute - Value} dictionaries without the associated capsule
+        # Here we just pair them back up again. Used to store in Observation
+        outputs = {}
+        for inputCapsule in self._fromCapsules:
+            outputs[inputCapsule] = {}
+            for attribute, value in attributes.items():
+                if inputCapsule.hasAttribute(attribute):
+                    outputs[inputCapsule][attribute] = value
+        return outputs
 
 
 
@@ -100,6 +116,41 @@ class CapsuleRoute:
             return
         else:
             self._neuralNetGamma.trainFromData(self._memory, showDebugOutput, specificSplit)
+
+
+
+    def runGammaFunction(self, attributes : dict = None):
+        # attributes        # Attribute - Value
+        if self._isSemanticCapsule is False:
+            return self._neuralNetGamma.forwardPass(attributes)
+        else:
+            # TODO: Semantic Calculation
+            outputs = {}
+            for index, attribute in self._gammaOutputMapping.items():
+                outputs[attribute] = 0.0
+            return outputs
+
+
+    def runGFunction(self, attributes : dict = None, isTraining : bool = True):
+        # attributes        # Attribute - Value
+        if self._isSemanticCapsule is False:
+            values = self._memory.runXInferer(Utility.mapDataOneWayDictRev(attributes, self._gInputMapping), isTraining)
+            return Utility.mapDataOneWay(values, self._gOutputMapping)  # Attribute - Value
+        else:
+            return self._neuralNetG.forwardPass(attributes)             # Attribute - Value
+
+
+    def agreementFunction(self, attributes1 : dict, attributes2 : dict):
+        # attributes1       # Attribute - Value
+        # attributes2       # Attribute - Value
+        outputs = {}
+        if self._isSemanticCapsule is False:
+            outputs = self._agreementFunctionLambda(attributes1, attributes2)
+        else:
+            for attribute, value in attributes1.keys():
+                outputs[attribute] = Utility.windowFunction(value - attributes2[attribute], 0.1, 0.1)
+            
+        return outputs # Attribute - Value
 
 
 #    def runGammaFunction(self):
@@ -138,38 +189,27 @@ class CapsuleRoute:
 #        return outputs
 
 
-    def runGammaFunction(self, attributes : list = None):
-        # attributes        # Attribute - Value
-        if self._isSemanticCapsule is False:
-            if attributes is None:
-                # TODO: Take actual Attributes
-                return [0.0] * len(self._gOutputMapping)
-            else:
-                return self._neuralNetGamma.forwardPass(attributes)
-        else:
-            return [0.0] * len(self._gOutputMapping)
 
-
-    def gNextBatch(self, batchSize):
-        if self._isSemanticCapsule is False:
-            return self._memory.nextBatch(batchSize, self._gammaInputMapping, self._gInputMapping)
-        else:
-            # TODO: Infer?
-            return None
-
-
-        
-    def gammaNextBatch(self, batchSize):
-        if self._isSemanticCapsule is True:
-            # TODO: 
-            return [[0], [0]]
-        else:
-            # TODO: Infer?
-            return None
-
-
-    def knownGammaAttributeFromInputs(self, attribute : Attribute):
-        # TODO: Mean Calculations and Co.
-
-        # TODO: If NOT covered:
-        return None
+#    def gNextBatch(self, batchSize):
+#        if self._isSemanticCapsule is False:
+#            return self._memory.nextBatch(batchSize, self._gammaInputMapping, self._gInputMapping)
+#        else:
+#            # TODO: Infer?
+#            return None
+#
+#
+#        
+#    def gammaNextBatch(self, batchSize):
+#        if self._isSemanticCapsule is True:
+#            # TODO: 
+#            return [[0], [0]]
+#        else:
+#            # TODO: Infer?
+#            return None
+#
+#
+#    def knownGammaAttributeFromInputs(self, attribute : Attribute):
+#        # TODO: Mean Calculations and Co.
+#
+#        # TODO: If NOT covered:
+#        return None

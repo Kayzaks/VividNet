@@ -7,15 +7,18 @@ from Observation import Observation
 from PrimitivesRenderer import PrimitivesRenderer
 from PrimitivesRenderer import Primitives
 
+import collections
 import copy
+import math
 
 class Capsule:
 
     def __init__(self, name : str):
-        self._name          : str           = name    # Capsule Name / Symbol
-        self._attributes    : list          = list()  # Attribute
-        self._routes        : list          = list()  # Route
-        self._observations  : list          = list()  # Observation
+        self._name          : str                       = name                      # Capsule Name / Symbol
+        self._attributes    : collections.OrderedDict   = collections.OrderedDict() # Attribute Name - Attribute
+        self._routes        : list                      = list()                    # Route
+        self._observations  : list                      = list()                    # Observation
+
 
 
     def addNewRoute(self, fromCapsules : list, knownGRenderer : PrimitivesRenderer = None, 
@@ -32,7 +35,8 @@ class Capsule:
 
             newRoute.createPrimitiveRoute(inMapAttrIdx, outMapIdxAttr, outMapAttrIdx, inMapIdxAttr,
                 (lambda : knownGRenderer.renderInputGenerator(knownGPrimitive, width, height)), 
-                (lambda attributes: knownGRenderer.renderPrimitive(knownGPrimitive, attributes, width, height, isTraining=True)),
+                (lambda attributes, isTraining: knownGRenderer.renderPrimitive(knownGPrimitive, attributes, width, height, isTraining)),
+                (lambda attributes1, attributes2: knownGRenderer.agreementFunction(fromCapsules[0], attributes1, attributes2, width, height)),
                 knownGRenderer.getModelSplit(knownGPrimitive), width, height, depth)
 
         self._routes.append(newRoute)
@@ -43,10 +47,10 @@ class Capsule:
             for capsule in route.getFromCapsules():
                 for attribute in capsule.getAttributes():
                     # Make sure we don't have copies
-                    if attribute.getType() not in [x.getType() for x in self._attributes]:
+                    if attribute.getType() not in [x.getType() for x in self._attributes.values()]:
                         newAttribute = attribute.getType().createAttribute()
                         newAttribute.setInherited()
-                        self._attributes.append(newAttribute)
+                        self._attributes[newAttribute.getName()] = newAttribute
 
             route.resizeInternals()
 
@@ -54,22 +58,27 @@ class Capsule:
     def createAttribute(self, name : str, attributePool : AttributePool):
         newAttribute = attributePool.createAttribute(name)
         if newAttribute is not None:
-            self._attributes.append(newAttribute)
+            self._attributes[newAttribute.getName()] = newAttribute
 
         for route in self._routes:
             route.resizeInternals()
         
 
     def getAttributeByName(self, name : str):
-        for attr in self._attributes:
-            if attr.getName().lower() == name.lower():
-                return attr
-        
+        if name in self._attributes:
+            return self._attributes[name]
         return None
 
 
     def getAttributes(self):
-        return self._attributes
+        return self._attributes.values()
+
+    
+    def hasAttribute(self, attribute : Attribute):
+        if attribute in self._attributes.values():
+            return True
+        else:
+            return False
 
 
     def getMappedAttributes(self, outputMap : dict):
@@ -81,25 +90,16 @@ class Capsule:
         return outputList
 
 
-    def getAttributeValue(self, name : str):
-        for attr in self._attributes:
-            if attr.getName().lower() == name.lower():
-                return attr.getValue()
-        
-        return 0.0
-
-    def setAttributeValue(self, name : str, value : float):
-        for attr in self._attributes:
-            if attr.getName().lower() == name.lower():
-                attr.setValue(value)
-
-
     def addObservation(self, observation : Observation):
         self._observations.append(observation)
 
 
     def clearObservations(self):
         self._observations = []
+
+
+    def getObservations(self):
+        return self._observations
 
 
     def getObservationOutput(self, index : int):
@@ -113,13 +113,25 @@ class Capsule:
                 outputDict[attribute] = 0.0
             return outputDict
 
+
+    def getObservationProbability(self, index : int):
+        if index > -1 and index < len(self._observations):
+            # n-th Observation
+            return self._observations[index].getProbability()
+        else:
+            # "Zero" Observation
+            return 0.0
+
+
     def getNumObservations(self):
         return len(self._observations)
 
 
-    def offsetObservations(self, offsetLabelX : str, offsetLabelY : str, targetLabelX : str, targetLabelY : str):
+    def cleanupObservations(self, offsetLabelX : str, offsetLabelY : str, offsetLabelXRatio : str, offsetLabelYRatio : str, targetLabelX : str, targetLabelY : str):
         for observation in self._observations:
-            observation.offset(offsetLabelX, offsetLabelY, targetLabelX, targetLabelY)
+            observation.offset(offsetLabelX, offsetLabelY, offsetLabelXRatio, offsetLabelYRatio, targetLabelX, targetLabelY)
+
+        # TODO: Remove Duplicates
 
 
     def forwardPass(self):
@@ -133,14 +145,15 @@ class Capsule:
         # -1 = Zero Caps
         # i = ith entry in Obs
         # TEST:
-        observations = []
         for index in range(len(self._routes[0]._fromCapsules[0]._observations)):
             permutations.append([(self._routes[0]._fromCapsules[0], index)])
 
 
         for permutation in permutations:
-            inputAttributes = {}
+            inputAttributes = {}        # Route - {Capsule, {Attribute, Value}}
+            inputProbabilities = {}     # Route - {Capsule, Probability}
             outputAttributes = {}       # Route - {Attribute, Value}
+            probabilities = {}          # Route - Probability
             for route in self._routes: 
 
                 # Zero out capsules that are not part of this route
@@ -159,18 +172,27 @@ class Capsule:
                         del checkOff[found]
 
                 inputAttributes[route] = {}
+                inputProbabilities[route] = {}
                 inputs = {}
                 for index, capsule in enumerate(route.getFromCapsules()):
                     inputAttributes[route][capsule] = capsule.getObservationOutput(actualPermutation[index])
-                    inputs.update(inputAttributes[route][capsule])  
+                    inputProbabilities[route][capsule] = capsule.getObservationProbability(actualPermutation[index])
+                    inputs.update(inputAttributes[route][capsule]) 
 
                 # Routing by Agreement
                 # 1. Run gamma                      
                 outputAttributes[route] = route.runGammaFunction(inputs)
 
                 # 2. Run g
+                expectedInputs = route.runGFunction(outputAttributes[route])
 
                 # 3. Calculate activation probability
+                agreement = route.agreementFunction(inputs, expectedInputs)
+                # TODO: Rest of agreement
+                probabilities[route] = self.calculateRouteProbability(agreement)
+
+                # TEMP:
+                print(probabilities[route])
 
                 # 4. repeat for all routes
 
@@ -178,7 +200,35 @@ class Capsule:
             # 5. Find most likely route
 
             # TODO: If above threshold, add Observation
-            observations.append(Observation(self._routes[0], inputAttributes[self._routes[0]], outputAttributes[self._routes[0]]))
+            if probabilities[self._routes[0]] > 0.8:
+                self._observations.append(Observation(self._routes[0], inputAttributes[self._routes[0]], outputAttributes[self._routes[0]], inputProbabilities[self._routes[0]], probabilities[self._routes[0]]))
 
-        # TEMP:
-        return observations
+
+    def backwardPass(self, observation : Observation, withBackground : bool):
+        # Observation with only outputs filled
+        takenRoute = observation.getTakenRoute()
+        if takenRoute is None:
+            # TODO: Choose a better route
+            # If no route is specified, we just take the first
+            takenRoute = self._routes[0]
+
+        outputs = takenRoute.runGFunction(observation.getOutputs(), isTraining = withBackground)
+        capsAttrValues = takenRoute.pairInputCapsuleAttributes(outputs)
+
+        obsList = {}
+        for capsule, attrValues in capsAttrValues.items():
+            obsList[capsule] = Observation(None, None, attrValues, None, observation.getInputProbability(capsule))
+
+        return obsList   # Capsule - Observation (with only outputs filled)
+
+
+    def calculateRouteProbability(self, agreement : dict):
+        # agreement         # Attribute - Value
+        total = 0.0 
+        for value in agreement.values():
+            total = total + value
+        total = total / float(len(agreement))
+
+        # TODO: Missing input probabilities, etc..
+
+        return total

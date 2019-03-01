@@ -70,8 +70,20 @@ class Utility:
             x = y
             y = (x + n // x) // 2
         return x
+
         
-        
+    @staticmethod
+    def windowFunction(x, width, falloff):
+        fullSupport = width
+        linearSupport = width + falloff
+        if abs(x) < fullSupport:
+            return 1.0
+        elif abs(x) < linearSupport:
+            return (1.0 - (abs(x) - fullSupport) / (linearSupport - fullSupport))
+        else:
+            return 0.0
+            
+
     @staticmethod
     def loadPNGGreyscale(filename : str):
         image = misc.imread(filename, "L")

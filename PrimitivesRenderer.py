@@ -9,6 +9,7 @@ import copy
 from AttributePool import AttributePool
 from Attribute import Attribute
 from AttributeType import AttributeLexical
+from Utility import Utility
 
 
 
@@ -100,7 +101,7 @@ def cudaKernelExample(ioArray, width, height, attributes):
     ioArray[offset, 2] = attributes[0]
 
     # Depth
-    ioArray[offset, 3] = 0.0
+    ioArray[offset, 3] = 1.0
 
 
 # Example Render Kernel for Python
@@ -193,6 +194,8 @@ class PrimitivesRenderer:
         
         attributePool.createType("SlidingFilter-X", AttributeLexical.NonTransmit)
         attributePool.createType("SlidingFilter-Y", AttributeLexical.NonTransmit)
+        attributePool.createType("SlidingFilter-X-Ratio", AttributeLexical.NonTransmit)
+        attributePool.createType("SlidingFilter-Y-Ratio", AttributeLexical.NonTransmit)
 
 
     def createAttributesForPixelLayer(self, width : int, height : int, capsule, attributePool : AttributePool):
@@ -207,10 +210,24 @@ class PrimitivesRenderer:
                 
         capsule.createAttribute("SlidingFilter-X", attributePool)
         capsule.createAttribute("SlidingFilter-Y", attributePool)
+        capsule.createAttribute("SlidingFilter-X-Ratio", attributePool)
+        capsule.createAttribute("SlidingFilter-Y-Ratio", attributePool)
     
+    
+    def agreementFunction(self, capsule, attributes1 : dict, attributes2 : dict, width : int, height : int):
+        outputs = {}
+        for xx in range(width):
+            for yy in range(height):
+                depth = attributes1[capsule.getAttributeByName("PixelD-" + str(xx) + "-" + str(yy))]
+                # We only check those pixels that contain the actual primitive and not just background
+                if depth > 0.0:
+                    intensityAttr = capsule.getAttributeByName("PixelC-" + str(xx) + "-" + str(yy))
+                    outputs[intensityAttr] = Utility.windowFunction(attributes1[intensityAttr] - attributes2[intensityAttr], 0.1, 0.1)
+        return outputs
+
 
     def getOffsetLabels(self):
-        return "SlidingFilter-X", "SlidingFilter-Y", "Position-X", "Position-Y"
+        return "SlidingFilter-X", "SlidingFilter-Y", "SlidingFilter-X-Ratio", "SlidingFilter-Y-Ratio", "Position-X", "Position-Y"
 
 
     def getLambdaGOutputMap(self, capsule, width : int, height : int):
@@ -309,15 +326,15 @@ class PrimitivesRenderer:
                     if isTraining is False:
                         pixels[(yy * width + xx) * 4 + 3]   = altBackgroundCutoff
                     else:                        
-                        pixels[(yy * width + xx) * 4 + 3]   = 0.0
+                        pixels[(yy * width + xx) * 4 + 3]   = 1.0
                 else:
                     pixels[(yy * width + xx) * 4]     = color[0]
                     pixels[(yy * width + xx) * 4 + 1] = color[1]
                     pixels[(yy * width + xx) * 4 + 2] = color[2]
                     if isTraining is False:
-                        pixels[(yy * width + xx) * 4 + 2] = color[2]
+                        pixels[(yy * width + xx) * 4 + 2] = color[3]
                     else:                        
-                        pixels[(yy * width + xx) * 4 + 3]   = 0.0
+                        pixels[(yy * width + xx) * 4 + 3]   = 1.0
 
         return pixels
 
@@ -342,7 +359,7 @@ class PrimitivesRenderer:
                     if isTraining is False:
                         pixels[(yy * width + xx) * 4 + 3]   = altBackgroundCutoff
                     else:                        
-                        pixels[(yy * width + xx) * 4 + 3]   = 0.0
+                        pixels[(yy * width + xx) * 4 + 3]   = 1.0
                 else:
                     pixels[(yy * width + xx) * 4]     = returnImage[xx * height + yy][0]
                     pixels[(yy * width + xx) * 4 + 1] = returnImage[xx * height + yy][1]
@@ -350,6 +367,6 @@ class PrimitivesRenderer:
                     if isTraining is False:
                         pixels[(yy * width + xx) * 4 + 3] = returnImage[xx * height + yy][3] 
                     else:                        
-                        pixels[(yy * width + xx) * 4 + 3]   = 0.0
+                        pixels[(yy * width + xx) * 4 + 3]   = 1.0
 
         return pixels

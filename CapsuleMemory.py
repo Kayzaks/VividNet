@@ -14,7 +14,7 @@ class CapsuleMemory:
         self._lambdaXMapping    : dict  = dict() # Column Index - Attribute
         self._lambdaYMapping    : dict  = dict() # Column Index - Attribute
         self._lambdaYGenerator          = None   #      -> Rand Y
-        self._lambdaXInferer            = None   # Y    -> X
+        self._lambdaXInferer            = None   # Y    -> X  
         self._lambdaYInferer            = None   # X    -> Y
 
         self._indexInEpoch      : int   = 0
@@ -103,6 +103,11 @@ class CapsuleMemory:
         return outX, outY 
 
 
+    def runXInferer(self, attributes : list, isTraining : bool):
+        # attributes        # Values
+        return self._lambdaXInferer(attributes, isTraining) # Values
+
+
     def nextBatch(self, batchSize : int, inputMap : dict, outputMap : dict):
         # inputMap  : dict   # Attribute - Index
         # outputMap : dict   # Attribute - Index
@@ -117,7 +122,7 @@ class CapsuleMemory:
             # Only create Fictive Data
             for idx in range(batchSize):
                 lyData = self._lambdaYGenerator()
-                lxData = self._lambdaXInferer(lyData)
+                lxData = self._lambdaXInferer(lyData, True)
                 yData[idx] = Utility.mapData(lyData, self._lambdaYMapping, outputMap)                
                 xData[idx] = Utility.mapData(lxData, self._lambdaXMapping, inputMap)
         else:

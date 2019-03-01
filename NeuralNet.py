@@ -74,10 +74,11 @@ class NeuralNet:
             return False
 
 
-    def loadFromFile(self):    
+    def loadFromFile(self, forceReload = False):    
         for index in range(self._numModels):            
-            if self.hasTraining(index):
-                self._nnModel[index] = keras.models.load_model("Models/" + self._name + "-M" + str(index) + ".h5", custom_objects={'rmse' : rmse})
+            if self._nnModel[index] is None or forceReload is True:
+                if self.hasTraining(index):
+                    self._nnModel[index] = keras.models.load_model("Models/" + self._name + "-M" + str(index) + ".h5", custom_objects={'rmse' : rmse})
 
 
     def defineModel(self, inputShape : tuple, outputSize : int):
@@ -143,7 +144,7 @@ class NeuralNet:
                     Y_DeltaTest = np.delete(Y_DeltaTest, np.s_[0:self._modelSplit[index]], axis=1)
     
 
-                if retrain is True or self.hasTraining(index) is False:
+                if retrain is True or self._nnModel[index] is None:
                     self._nnModel[index] = self.defineModel(tuple(trainShape[1:]), len(Y_DeltaTrain[0]))
 
 
