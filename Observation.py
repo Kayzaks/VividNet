@@ -29,8 +29,8 @@ class Observation:
 
     def getOutputs(self):
         return self._outputAttributes    # Attribute - Value
+        
 
-    
     def setOutput(self, attribute : Attribute, value : float):
         if attribute in self._outputAttributes:
             self._outputAttributes[attribute] = value
@@ -44,7 +44,7 @@ class Observation:
     def getProbability(self):
         return self._outputProbability
 
-    
+
     def getInputProbability(self, capsule):
         if capsule in self._inputProbability:
             return self._inputProbability[capsule]
@@ -56,31 +56,18 @@ class Observation:
         return self._route
 
 
-    def offset(self, offsetLabelX : str, offsetLabelY : str, offsetLabelXRatio : str, offsetLabelYRatio : str, targetLabelX : str, targetLabelY : str):
+    def offset(self, offsetLabelX : str, offsetLabelY : str, offsetLabelRatio : str, targetLabelX : str, targetLabelY : str, targetLabelSize : str):
         # We can only offset by one set of attributes, so get any Capsule from the list (Should only be
         # one when this method is called anyways)
         inputCapsule = list(self._inputAttributes.keys())[0]
         offsetX = self._inputAttributes[inputCapsule][inputCapsule.getAttributeByName(offsetLabelX)]
         offsetY = self._inputAttributes[inputCapsule][inputCapsule.getAttributeByName(offsetLabelY)]
-        offsetXRatio = self._inputAttributes[inputCapsule][inputCapsule.getAttributeByName(offsetLabelXRatio)]
-        offsetYRatio = self._inputAttributes[inputCapsule][inputCapsule.getAttributeByName(offsetLabelYRatio)]
+        offsetRatio = self._inputAttributes[inputCapsule][inputCapsule.getAttributeByName(offsetLabelRatio)]
 
         for attribute, value in self._outputAttributes.items():
             if attribute.getName() == targetLabelX:
-                self._outputAttributes[attribute] = value * offsetXRatio + offsetX
+                self._outputAttributes[attribute] = value * offsetRatio + offsetX
             if attribute.getName() == targetLabelY:
-                self._outputAttributes[attribute] = value * offsetYRatio + offsetY
-
-
-    def revertOffset(self, offsetLabelX : str, offsetLabelY : str, offsetLabelXRatio : str, offsetLabelYRatio : str, targetLabelX : str, targetLabelY : str):
-        inputCapsule = list(self._inputAttributes.keys())[0]
-        offsetX = self._inputAttributes[inputCapsule][inputCapsule.getAttributeByName(offsetLabelX)]
-        offsetY = self._inputAttributes[inputCapsule][inputCapsule.getAttributeByName(offsetLabelY)]
-        offsetXRatio = self._inputAttributes[inputCapsule][inputCapsule.getAttributeByName(offsetLabelXRatio)]
-        offsetYRatio = self._inputAttributes[inputCapsule][inputCapsule.getAttributeByName(offsetLabelYRatio)]
-
-        for attribute, value in self._outputAttributes.items():
-            if attribute.getName() == targetLabelX:
-                self._outputAttributes[attribute] = value * offsetXRatio + offsetX
-            if attribute.getName() == targetLabelY:
-                self._outputAttributes[attribute] = value * offsetYRatio + offsetY
+                self._outputAttributes[attribute] = value * offsetRatio + offsetY
+            if attribute.getName() == targetLabelSize:
+                self._outputAttributes[attribute] = value * offsetRatio

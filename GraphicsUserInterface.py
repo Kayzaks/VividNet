@@ -1,34 +1,29 @@
 
 from matplotlib.widgets import Button
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import numpy
 
 class GraphicsUserInterface:
-
-    def drawArray(self, pixels : list, width : int, height : int):
-        plt.imshow(numpy.reshape(pixels, [height, width, 3]))
-        plt.show()
-
         
-    def drawArrayCompare(self, title1 : str, title2 : str, 
-                         pixels1 : list, pixels2 : list, width1 : int, height1 : int, width2 : int, height2 : int):
-        fig, axarr = plt.subplots(1,2)
-        axarr[0].imshow(numpy.reshape(pixels1, [height1, width1, 3]))
-        axarr[1].imshow(numpy.reshape(pixels2, [height2, width2, 3]))
-        axarr[0].set_title(title1)
-        axarr[1].set_title(title2)
-        plt.show()
-        
-    def drawArrayCompare3(self, title1 : str, title2 : str, title3 : str,
-                         pixels1 : list, pixels2 : list, pixels3 : list, width : int, height : int):
+    def drawAll(self, pixels1 : list, pixels2 : list, width1 : int, height1 : int, width2 : int, height2 : int, 
+                         semantics : list = [], texts : list = []):
         fig, axarr = plt.subplots(1,3)
-        axarr[0].imshow(numpy.reshape(pixels1, [height, width, 3]))
-        axarr[1].imshow(numpy.reshape(pixels2, [height, width, 3]))
-        axarr[2].imshow(numpy.reshape(pixels3, [height, width, 3]))
-        axarr[0].set_title(title1)
-        axarr[1].set_title(title2)
-        axarr[2].set_title(title3)
+        axarr[0].imshow(numpy.reshape(pixels1, [height1, width1, 3]))
+        axarr[1].imshow(numpy.reshape(pixels1, [height1, width1, 3]))
+        axarr[2].imshow(numpy.reshape(pixels2, [height2, width2, 3]))
+        axarr[0].set_title("Original")
+        axarr[1].set_title("Detected Semantics")
+        axarr[2].set_title("'Mind's eye'")
+
+        for semantic in semantics:
+            axarr[1].add_patch(semantic)
+
+        for text in texts:
+            axarr[1].text(text[0], text[1], text[2], color = 'y', fontsize=8)
+
         plt.show()
+        
 
     def createDrawBoard(self, lambdaRunCallback, lambdaCloseCallback, intDimX, intDimY):
 

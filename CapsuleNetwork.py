@@ -5,6 +5,7 @@ from Observation import Observation
 
 import copy
 import numpy as np
+import matplotlib.patches as patches
 
 class CapsuleNetwork:
 
@@ -16,6 +17,13 @@ class CapsuleNetwork:
         self._numSemanticLayers  : int           = 0                
         self._attributePool      : AttributePool = AttributePool()
         self._renderer                           = None             # PrimitivesRenderer Instance
+
+
+    def getShapeByPixelCapsule(self, capsule : Capsule):
+        for shape, pixelCaps in self._pixelCapsules.items():
+            if capsule == pixelCaps:
+                return shape
+        return (0, 0)
 
     
     def setRenderer(self, rendererClass):
@@ -29,8 +37,7 @@ class CapsuleNetwork:
         if self._renderer is None:
             print("No Renderer of Type PrimitivesRenderer defined")
             return
-        print(str(primitive) + "-Primitive")
-        currentCapsule = Capsule(str(primitive) + "-Primitive")
+        currentCapsule = Capsule(str(primitive))
         self._renderer.createAttributesForPrimitive(primitive, currentCapsule, self._attributePool)
 
         for filterShape in filterShapes:
@@ -68,6 +75,8 @@ class CapsuleNetwork:
 
         print("Capsule Network shown an Image of size (" + str(width) + ", " + str(height) + ")")
 
+        offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize = self._renderer.getOffsetLabels()
+
         for filterShape, capsule in self._pixelCapsules.items():
             if filterShape[0] <= width and filterShape[1] <= height:
                 for offsetX in range(0, width - filterShape[0] + 1, stepSize):
@@ -81,22 +90,20 @@ class CapsuleNetwork:
                                 attributes[capsule.getAttributeByName("PixelY-" + str(xx) + "-" + str(yy))] = float(yy) / float(filterShape[1])
                                 attributes[capsule.getAttributeByName("PixelD-" + str(xx) + "-" + str(yy))] = 1.0
 
-                        attributes[capsule.getAttributeByName("SlidingFilter-X")] = float(offsetX) / float(max(width, height))
-                        attributes[capsule.getAttributeByName("SlidingFilter-Y")] = float(offsetY) / float(max(width, height))
-                        attributes[capsule.getAttributeByName("SlidingFilter-X-Ratio")] = float(filterShape[0]) / float(max(width, height))
-                        attributes[capsule.getAttributeByName("SlidingFilter-Y-Ratio")] = float(filterShape[1]) / float(max(width, height))
+                        attributes[capsule.getAttributeByName(offsetLabelX)] = float(offsetX) / float(max(width, height))
+                        attributes[capsule.getAttributeByName(offsetLabelY)] = float(offsetY) / float(max(width, height))
+                        attributes[capsule.getAttributeByName(offsetLabelRatio)] = float(filterShape[0]) / float(max(width, height))
 
                         pixelObs = Observation(None, {}, attributes, None, 1.0)
                         capsule.addObservation(pixelObs)
 
         print("Forward Pass on all Primitive Capsules")
-        offsetLabelX, offsetLabelY, offsetLabelXRatio, offsetLabelYRatio, targetLabelX, targetLabelY = self._renderer.getOffsetLabels()
 
         allObs = {}     # Capsule - List Of Observations
 
         for capsule in self._primitiveCapsules:
             capsule.forwardPass()
-            capsule.cleanupObservations(offsetLabelX, offsetLabelY, offsetLabelXRatio, offsetLabelYRatio, targetLabelX, targetLabelY)
+            capsule.cleanupObservations(offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize)
             allObs[capsule] = capsule.getObservations()
 
 
@@ -106,7 +113,7 @@ class CapsuleNetwork:
                 capsule.forwardPass()
                 allObs[capsule] = capsule.getObservations()
 
-        return allObs
+        return allObs   # Capsule - List Of Observations
 
         
 
@@ -138,26 +145,53 @@ class CapsuleNetwork:
                 capsObsPairs.append((capsule, observation))
         capsObsPairs = sorted(capsObsPairs, key=lambda tup: tup[1].getProbability())
 
+
+        offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize = self._renderer.getOffsetLabels()
+        semantics = []
+        texts = []
         image = np.zeros(width * height * 4)
 
         for capsule, observation in capsObsPairs:            
-            # TODO: Nicer...
-            # TODO: Get FilterShape
-            xOffset = int(observation.getOutput(capsule.getAttributeByName("Position-X")) * float(max(width, height))) - 14
-            yOffset = int(observation.getOutput(capsule.getAttributeByName("Position-Y")) * float(max(width, height))) - 14
+            pixelShape = self.getShapeByPixelCapsule(capsule.getPixelLayerInput())
 
-            observation.setOutput(capsule.getAttributeByName("Position-X"), 0.5)
-            observation.setOutput(capsule.getAttributeByName("Position-Y"), 0.5)
+            xOffset = observation.getOutput(capsule.getAttributeByName(targetLabelX))
+            yOffset = observation.getOutput(capsule.getAttributeByName(targetLabelY))
+            size = observation.getOutput(capsule.getAttributeByName(targetLabelSize))
 
-            obsPixelLayer = capsule.backwardPass(observation, withBackground)
+            observation.setOutput(capsule.getAttributeByName(targetLabelX), 0.5)
+            observation.setOutput(capsule.getAttributeByName(targetLabelY), 0.5)
+            observation.setOutput(capsule.getAttributeByName(targetLabelSize), size * float(max(width, height)) / float(pixelShape[0]))
+
+            obsPixelLayer = capsule.backwardPass(observation, False)
 
             pixelObs = list(obsPixelLayer.values())[0]
             pixelLay = list(obsPixelLayer.keys())[0]
-            for xx in range(28):
-                for yy in range(28):
+
+            xOffset = int(xOffset * float(max(width, height))) - int(pixelShape[0] / 2)
+            yOffset = int(yOffset * float(max(width, height))) - int(pixelShape[1] / 2)
+
+            # We actually have far more accurate segmentation (including rotation, etc), but its hard to do nicely in matplotlib,
+            # so we decided to just box it roughly.
+            minX = xOffset + pixelShape[0]
+            maxX = xOffset
+            minY = yOffset + pixelShape[1]
+            maxY = yOffset
+
+            for xx in range(pixelShape[0]):
+                for yy in range(pixelShape[1]):
                     if xx + xOffset < width and xx + xOffset >= 0 and yy + yOffset < height and yy + yOffset >= 0:
                         depth = pixelObs.getOutput(pixelLay.getAttributeByName("PixelD-" + str(xx) + "-" + str(yy)))
+                        
+                        if depth < 1.0:
+                            minX = min(xx + xOffset, minX)
+                            maxX = max(xx + xOffset, maxX)
+                            minY = min(yy + yOffset, minY)
+                            maxY = max(yy + yOffset, maxY)
+
                         if withBackground is True or depth < 1.0:
                             image[((yy + yOffset) * width + xx + xOffset) * 4] = pixelObs.getOutput(pixelLay.getAttributeByName("PixelC-" + str(xx) + "-" + str(yy)))
 
-        return image    # Linear List of Pixels
+            semantics.append(patches.Rectangle((minX, minY), maxX - minX, maxY - minY, linewidth = 1, edgecolor = 'y', facecolor = 'none'))
+            texts.append((minX, minY, capsule.getName()))
+
+        return image, semantics, texts    # Linear List of Pixels

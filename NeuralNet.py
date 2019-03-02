@@ -10,6 +10,7 @@ import threading
 from Utility import Utility
 from pathlib import Path
 from CapsuleMemory import CapsuleMemory
+from HyperParameters import HyperParameters
 
 import os
 import keras
@@ -148,7 +149,7 @@ class NeuralNet:
                     self._nnModel[index] = self.defineModel(tuple(trainShape[1:]), len(Y_DeltaTrain[0]))
 
 
-                opt = keras.optimizers.Adam(lr=0.0001)
+                opt = keras.optimizers.Adam(lr=HyperParameters.AdamLearningRate)
 
                 self._nnModel[index].compile(loss="mean_squared_error",
                             optimizer=opt,

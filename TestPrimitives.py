@@ -36,10 +36,10 @@ def cudaKernelCircle(ioArray, width, height, attributes):
     FF = cuda.local.array(shape=(28, 28), dtype=float32)
     
     dctDim = 8
-    index = 0
+    index = 7
     for uu in range(dctDim):
         for vv in range(dctDim):
-            FF[uu, vv] = attributes[7 + index]
+            FF[uu, vv] = attributes[index]
             index = index + 1
 
     intensity1 = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi)) / attributes[4]
@@ -48,8 +48,8 @@ def cudaKernelCircle(ioArray, width, height, attributes):
 
     depth = 1.0 - intensity
 
-    intensity =  intensity * attributes[5]
-    background = cudaGreyDCT(xx, yy, FF, dctDim)
+    intensity =  (intensity * attributes[5] * 0.4) + 0.6
+    background = min(cudaGreyDCT(xx, yy, FF, dctDim), 1.0) * 0.4
 
     # Color
     ioArray[offset, 0] = intensity * (1.0 - depth) + background * depth
@@ -69,10 +69,10 @@ def cudaKernelSquare(ioArray, width, height, attributes):
     FF = cuda.local.array(shape=(28, 28), dtype=float32)
     
     dctDim = 8
-    index = 0
+    index = 7
     for uu in range(dctDim):
         for vv in range(dctDim):
-            FF[uu, vv] = attributes[7 + index]
+            FF[uu, vv] = attributes[index]
             index = index + 1
 
     intensity1 = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi * 0.5)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi * 0.5)) / attributes[4]
@@ -83,8 +83,8 @@ def cudaKernelSquare(ioArray, width, height, attributes):
 
     depth = 1.0 - intensity
 
-    intensity =  intensity * attributes[5]
-    background = cudaGreyDCT(xx, yy, FF, dctDim)
+    intensity =  (intensity * attributes[5] * 0.4) + 0.6
+    background = min(cudaGreyDCT(xx, yy, FF, dctDim), 1.0) * 0.4
 
     # Color
     ioArray[offset, 0] = intensity * (1.0 - depth) + background * depth
@@ -112,7 +112,7 @@ class TestRenderer(PrimitivesRenderer):
         # Circle
         primAttributes[0] = ("Position-X", AttributeLexical.Preposition)
         primAttributes[1] = ("Position-Y", AttributeLexical.Preposition)
-        primAttributes[2] = ("Radius", AttributeLexical.Preposition)
+        primAttributes[2] = ("Size", AttributeLexical.Preposition)          # Radius
         primAttributes[3] = ("Rotation", AttributeLexical.Preposition)
         primAttributes[4] = ("Aspect-Ratio", AttributeLexical.Preposition)
         
@@ -128,8 +128,7 @@ class TestRenderer(PrimitivesRenderer):
                 
         self.setPrimitiveAttributes(TestPrimitives.Circle, attributePool, primAttributes)
 
-        # Square
-        primAttributes[2] = ("Size", AttributeLexical.Preposition)     
+        # Square   
         self.setPrimitiveAttributes(TestPrimitives.Square, attributePool, primAttributes)
 
 
@@ -149,11 +148,13 @@ class TestRenderer(PrimitivesRenderer):
         outList[0] = 0.5
         outList[1] = 0.5
         # Minimum Size
-        outList[2] = max(0.1, outList[2])
-        outList[4] = max(0.25, outList[4])
+        outList[2] = max(0.2, outList[2])
+        outList[4] = max(0.5, outList[4])
         # No "invisible" Primitive
         outList[6] = max(0.1, outList[6])
 
+        #for idx in range(DCTDIMENSION * DCTDIMENSION):
+        #    outList[7 + idx] = np.random.normal(0.5, 0.15)
 
         return outList
 

@@ -31,6 +31,10 @@ class CapsuleRoute:
         self.resizeInternals()
 
 
+    def isSemantic(self):
+        return self._isSemanticCapsule
+
+
     def createSemanticRoute(self):
         self._isSemanticCapsule = True
         return
@@ -147,11 +151,21 @@ class CapsuleRoute:
         if self._isSemanticCapsule is False:
             outputs = self._agreementFunctionLambda(attributes1, attributes2)
         else:
-            for attribute, value in attributes1.keys():
-                outputs[attribute] = Utility.windowFunction(value - attributes2[attribute], 0.1, 0.1)
+            outputs = CapsuleRoute.semanticAgreementFunction(attributes1, attributes2)
             
         return outputs # Attribute - Value
 
+
+    @staticmethod
+    def semanticAgreementFunction(attributes1 : dict, attributes2 : dict):
+        # attributes1       # Attribute - Value
+        # attributes2       # Attribute - Value
+        outputs = {}
+        for attribute, value in attributes1.items():
+            outputs[attribute] = Utility.windowFunction(value - attributes2[attribute], 0.1, 0.1)
+            
+        return outputs # Attribute - Value
+            
 
 #    def runGammaFunction(self):
 #        # TODO: Redesign?

@@ -142,7 +142,7 @@ class PrimitivesRenderer:
         ## Index must match the one used in the kernel
         # primAttributes[0] = ("Alpha", AttributeLexical.NonTransmit)
 
-        # Has to have "Position-X" and "Position-Y"
+        # Has to have "Size", "Position-X" and "Position-Y"
 
         # self.setPrimitiveAttributes(Primitives.Unknown, attributePool, primAttributes)
         # self.setKernels({Primitives.Unknown : pythonKernelExample})
@@ -172,7 +172,7 @@ class PrimitivesRenderer:
         # TODO: Max Intensity according to dimension?
         for uu in range(dctDimension):
             for vv in range(dctDimension):
-                intensity =  (1024.0 / ((max(uu, vv) + 1)))  
+                intensity = ((128.0 * float(dctDimension) * 2.0) / ((max(uu, vv) + 1)))  
                 attributes[startIndex + (uu * dctDimension) + vv] = (attributes[startIndex + (uu * dctDimension) + vv] - 0.5) * intensity 
         
         return attributes
@@ -194,8 +194,7 @@ class PrimitivesRenderer:
         
         attributePool.createType("SlidingFilter-X", AttributeLexical.NonTransmit)
         attributePool.createType("SlidingFilter-Y", AttributeLexical.NonTransmit)
-        attributePool.createType("SlidingFilter-X-Ratio", AttributeLexical.NonTransmit)
-        attributePool.createType("SlidingFilter-Y-Ratio", AttributeLexical.NonTransmit)
+        attributePool.createType("SlidingFilter-Ratio", AttributeLexical.NonTransmit)
 
 
     def createAttributesForPixelLayer(self, width : int, height : int, capsule, attributePool : AttributePool):
@@ -210,24 +209,23 @@ class PrimitivesRenderer:
                 
         capsule.createAttribute("SlidingFilter-X", attributePool)
         capsule.createAttribute("SlidingFilter-Y", attributePool)
-        capsule.createAttribute("SlidingFilter-X-Ratio", attributePool)
-        capsule.createAttribute("SlidingFilter-Y-Ratio", attributePool)
+        capsule.createAttribute("SlidingFilter-Ratio", attributePool)
     
     
     def agreementFunction(self, capsule, attributes1 : dict, attributes2 : dict, width : int, height : int):
         outputs = {}
         for xx in range(width):
             for yy in range(height):
-                depth = attributes1[capsule.getAttributeByName("PixelD-" + str(xx) + "-" + str(yy))]
+                depth = attributes2[capsule.getAttributeByName("PixelD-" + str(xx) + "-" + str(yy))]
                 # We only check those pixels that contain the actual primitive and not just background
-                if depth > 0.0:
+                if depth < 1.0:
                     intensityAttr = capsule.getAttributeByName("PixelC-" + str(xx) + "-" + str(yy))
                     outputs[intensityAttr] = Utility.windowFunction(attributes1[intensityAttr] - attributes2[intensityAttr], 0.1, 0.1)
         return outputs
 
 
     def getOffsetLabels(self):
-        return "SlidingFilter-X", "SlidingFilter-Y", "SlidingFilter-X-Ratio", "SlidingFilter-Y-Ratio", "Position-X", "Position-Y"
+        return "SlidingFilter-X", "SlidingFilter-Y", "SlidingFilter-Ratio", "Position-X", "Position-Y", "Size"
 
 
     def getLambdaGOutputMap(self, capsule, width : int, height : int):

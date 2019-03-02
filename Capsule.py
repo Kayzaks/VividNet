@@ -7,6 +7,8 @@ from Observation import Observation
 from PrimitivesRenderer import PrimitivesRenderer
 from PrimitivesRenderer import Primitives
 
+from HyperParameters import HyperParameters
+
 import collections
 import copy
 import math
@@ -19,6 +21,14 @@ class Capsule:
         self._routes        : list                      = list()                    # Route
         self._observations  : list                      = list()                    # Observation
 
+
+    def getName(self):
+        return self._name
+
+
+    def continueTraining(self, showDebugOutput = True, specificSplit : list = None):
+        for route in self._routes:
+            route.retrain(showDebugOutput, specificSplit)
 
 
     def addNewRoute(self, fromCapsules : list, knownGRenderer : PrimitivesRenderer = None, 
@@ -40,6 +50,14 @@ class Capsule:
                 knownGRenderer.getModelSplit(knownGPrimitive), width, height, depth)
 
         self._routes.append(newRoute)
+
+    
+    def getPixelLayerInput(self):
+        # Not Pretty...
+        for route in self._routes:
+            if route.isSemantic() is False:
+                return route.getFromCapsules()[0]
+        return None
 
 
     def inheritAttributes(self, fromCapsules : list):
@@ -131,7 +149,14 @@ class Capsule:
         for observation in self._observations:
             observation.offset(offsetLabelX, offsetLabelY, offsetLabelXRatio, offsetLabelYRatio, targetLabelX, targetLabelY)
 
-        # TODO: Remove Duplicates
+        sortedObs = sorted(self._observations, reverse = True, key = (lambda x : x.getProbability()))
+        
+        for index, obs in enumerate(sortedObs):
+            for index2 in range(index + 1, len(sortedObs)):
+                if sortedObs[index2] in self._observations:
+                    agreement = CapsuleRoute.semanticAgreementFunction(obs.getOutputs(), sortedObs[index2].getOutputs())
+                    if self.calculateRouteProbability(agreement) > HyperParameters.SimilarObservationsCutOff:
+                        self._observations.remove(sortedObs[index2])
 
 
     def forwardPass(self):
@@ -184,15 +209,12 @@ class Capsule:
                 outputAttributes[route] = route.runGammaFunction(inputs)
 
                 # 2. Run g
-                expectedInputs = route.runGFunction(outputAttributes[route])
+                expectedInputs = route.runGFunction(outputAttributes[route], False)
 
                 # 3. Calculate activation probability
                 agreement = route.agreementFunction(inputs, expectedInputs)
                 # TODO: Rest of agreement
                 probabilities[route] = self.calculateRouteProbability(agreement)
-
-                # TEMP:
-                print(probabilities[route])
 
                 # 4. repeat for all routes
 
@@ -200,7 +222,7 @@ class Capsule:
             # 5. Find most likely route
 
             # TODO: If above threshold, add Observation
-            if probabilities[self._routes[0]] > 0.8:
+            if probabilities[self._routes[0]] > HyperParameters.ProbabilityCutOff:
                 self._observations.append(Observation(self._routes[0], inputAttributes[self._routes[0]], outputAttributes[self._routes[0]], inputProbabilities[self._routes[0]], probabilities[self._routes[0]]))
 
 
@@ -224,6 +246,8 @@ class Capsule:
 
     def calculateRouteProbability(self, agreement : dict):
         # agreement         # Attribute - Value
+        if len(agreement) == 0:
+            return 0.0
         total = 0.0 
         for value in agreement.values():
             total = total + value
