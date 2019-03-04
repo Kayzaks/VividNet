@@ -12,14 +12,17 @@ from HyperParameters import HyperParameters
 import collections
 import copy
 import math
+import itertools
+
 
 class Capsule:
 
     def __init__(self, name : str):
-        self._name          : str                       = name                      # Capsule Name / Symbol
-        self._attributes    : collections.OrderedDict   = collections.OrderedDict() # Attribute Name - Attribute
-        self._routes        : list                      = list()                    # Route
-        self._observations  : list                      = list()                    # Observation
+        self._name              : str                       = name                      # Capsule Name / Symbol
+        self._attributes        : collections.OrderedDict   = collections.OrderedDict() # Attribute Name - Attribute
+        self._routes            : list                      = list()                    # Route
+
+        self._pixelObservations : list                      = list()                    # List of Observations
 
 
     def getName(self):
@@ -31,25 +34,37 @@ class Capsule:
             route.retrain(showDebugOutput, specificSplit)
 
 
-    def addNewRoute(self, fromCapsules : list, knownGRenderer : PrimitivesRenderer = None, 
-                          knownGPrimitive : Primitives = None):
+    def addPrimitiveRoute(self, fromCapsule, knownGRenderer : PrimitivesRenderer, 
+                          knownGPrimitive : Primitives):
         numRoutes = len(self._routes)
-        newRoute = CapsuleRoute(self, self._name + "-R-" + str(numRoutes), fromCapsules)
+        newRoute = CapsuleRoute(self, self._name + "-R-" + str(numRoutes), [fromCapsule])
 
-        # The known g Render can only be used with one pixel-layer as input
-        if knownGRenderer is not None and len(fromCapsules) == 1:
-            width, height, depth = knownGRenderer.inferDimensionsFromPixelLayer(fromCapsules[0])
-            
-            outMapIdxAttr, outMapAttrIdx = knownGRenderer.getLambdaGOutputMap(fromCapsules[0], width, height)
-            inMapIdxAttr, inMapAttrIdx = knownGRenderer.getLambdaGInputMap(knownGPrimitive, self)
+        width, height, depth = knownGRenderer.inferDimensionsFromPixelLayer(fromCapsule)
+        
+        outMapIdxAttr, outMapAttrIdx = knownGRenderer.getLambdaGOutputMap(fromCapsule, width, height)
+        inMapIdxAttr, inMapAttrIdx = knownGRenderer.getLambdaGInputMap(knownGPrimitive, self)
 
-            newRoute.createPrimitiveRoute(inMapAttrIdx, outMapIdxAttr, outMapAttrIdx, inMapIdxAttr,
-                (lambda : knownGRenderer.renderInputGenerator(knownGPrimitive, width, height)), 
-                (lambda attributes, isTraining: knownGRenderer.renderPrimitive(knownGPrimitive, attributes, width, height, isTraining)),
-                (lambda attributes1, attributes2: knownGRenderer.agreementFunction(fromCapsules[0], attributes1, attributes2, width, height)),
-                knownGRenderer.getModelSplit(knownGPrimitive), width, height, depth)
+        newRoute.createPrimitiveRoute(inMapAttrIdx, outMapIdxAttr, outMapAttrIdx, inMapIdxAttr,
+            (lambda : knownGRenderer.renderInputGenerator(knownGPrimitive, width, height)), 
+            (lambda attributes, isTraining: knownGRenderer.renderPrimitive(knownGPrimitive, attributes, width, height, isTraining)),
+            (lambda attributes1, attributes2: knownGRenderer.agreementFunction(fromCapsule, attributes1, attributes2, width, height)),
+            knownGRenderer.getModelSplit(knownGPrimitive), width, height, depth)
 
         self._routes.append(newRoute)
+        
+    def addSemanticRoute(self, fromObservations : list, attributePool : AttributePool):
+        numRoutes = len(self._routes)
+        fromCapsules = []
+        for obs in fromObservations:
+            fromCapsules.append(obs.getCapsule())
+        newRoute = CapsuleRoute(self, self._name + "-R-" + str(numRoutes), fromCapsules)
+
+        self._routes.append(newRoute)
+
+        self.inheritAttributes(fromCapsules, attributePool)
+
+        newRoute.createSemanticRoute(fromObservations)
+
 
     
     def getPixelLayerInput(self):
@@ -60,26 +75,21 @@ class Capsule:
         return None
 
 
-    def inheritAttributes(self, fromCapsules : list):
+    def inheritAttributes(self, fromCapsules : list, attributePool : AttributePool):
         for route in self._routes:
             for capsule in route.getFromCapsules():
                 for attribute in capsule.getAttributes():
                     # Make sure we don't have copies
-                    if attribute.getType() not in [x.getType() for x in self._attributes.values()]:
-                        newAttribute = attribute.getType().createAttribute()
-                        newAttribute.setInherited()
-                        self._attributes[newAttribute.getName()] = newAttribute
-
-            route.resizeInternals()
+                    if attribute.isInheritable() is True and attribute.getName() not in self._attributes:
+                        self.createAttribute(attribute.getName(), attributePool, True)
 
 
-    def createAttribute(self, name : str, attributePool : AttributePool):
+    def createAttribute(self, name : str, attributePool : AttributePool, isInherited : bool = False):
         newAttribute = attributePool.createAttribute(name)
         if newAttribute is not None:
             self._attributes[newAttribute.getName()] = newAttribute
-
-        for route in self._routes:
-            route.resizeInternals()
+            if isInherited is True:
+                self._attributes[newAttribute.getName()].setInherited()
         
 
     def getAttributeByName(self, name : str):
@@ -89,7 +99,7 @@ class Capsule:
 
 
     def getAttributes(self):
-        return self._attributes.values()
+        return list(self._attributes.values())
 
     
     def hasAttribute(self, attribute : Attribute):
@@ -108,101 +118,109 @@ class Capsule:
         return outputList
 
 
-    def addObservation(self, observation : Observation):
-        self._observations.append(observation)
+    def addPixelObservation(self, observation : Observation):
+        self._pixelObservations.append(observation)
+
+
+    def addObservations(self, route : CapsuleRoute, observation : Observation):
+        route.addObservations(observation)
 
 
     def clearObservations(self):
-        self._observations = []
+        for route in self._routes:
+            route.clearObservations()
 
 
     def getObservations(self):
-        return self._observations
+        outputList = []
+        for route in self._routes:
+            outputList.extend(route.getObservations())
+
+        outputList.extend(self._pixelObservations)
+        return outputList
 
 
-    def getObservationOutput(self, index : int):
-        if index > -1 and index < len(self._observations):
-            # n-th Observation
-            return self._observations[index].getOutputs()
-        else:
-            # "Zero" Observation
-            outputDict = {}
-            for attribute in self._attributes:
-                outputDict[attribute] = 0.0
-            return outputDict
+    def getObservation(self, index : int):
+        currentIndex = index
+        for route in self._routes:
+            if index < route.getNumObservations():
+                return route.getObservation(index)
+            currentIndex = currentIndex - route.getNumObservations()
+        
+        if index < len(self._pixelObservations):
+            return self._pixelObservations[index]
 
-
-    def getObservationProbability(self, index : int):
-        if index > -1 and index < len(self._observations):
-            # n-th Observation
-            return self._observations[index].getProbability()
-        else:
-            # "Zero" Observation
-            return 0.0
+        # Otherwise, Zero Observation
+        zeroDict = {}
+        for attribute in self._attributes:
+            zeroDict[attribute] = 0.0
+        return Observation(self, None, [], zeroDict, 0.0)
 
 
     def getNumObservations(self):
-        return len(self._observations)
+        numObs = 0
+        for route in self._routes:
+            numObs = numObs + route.getNumObservations()
+        numObs = numObs + len(self._pixelObservations)
+        return numObs
 
 
     def cleanupObservations(self, offsetLabelX : str, offsetLabelY : str, offsetLabelXRatio : str, offsetLabelYRatio : str, targetLabelX : str, targetLabelY : str):
-        for observation in self._observations:
-            observation.offset(offsetLabelX, offsetLabelY, offsetLabelXRatio, offsetLabelYRatio, targetLabelX, targetLabelY)
+        for route in self._routes:
+            route.cleanupObservations(offsetLabelX, offsetLabelY, offsetLabelXRatio, offsetLabelYRatio, targetLabelX, targetLabelY)
 
-        sortedObs = sorted(self._observations, reverse = True, key = (lambda x : x.getProbability()))
-        
-        for index, obs in enumerate(sortedObs):
-            for index2 in range(index + 1, len(sortedObs)):
-                if sortedObs[index2] in self._observations:
-                    agreement = CapsuleRoute.semanticAgreementFunction(obs.getOutputs(), sortedObs[index2].getOutputs())
-                    if self.calculateRouteProbability(agreement) > HyperParameters.SimilarObservationsCutOff:
-                        self._observations.remove(sortedObs[index2])
+
+    def removeObservation(self, observation : Observation):
+        for route in self._routes:
+            if route.removeObservation(observation) is True:
+                for inputObs in observation.getInputObservations():
+                    inputObs.getCapsule().removeObservation(inputObs)
+
+
+    def getAllInputs(self):
+        maxNumInputs = 0
+        inputCapsules = set()  # Capsule - Max Number of Occurances per Route
+        for route in self._routes:
+            routeCaps = route.getFromCapsules()
+            maxNumInputs = max(maxNumInputs, len(routeCaps))
+            for capsule in routeCaps:
+                inputCapsules.add(capsule)
+
+        return maxNumInputs, list(inputCapsules)      # Max Input Number, Capsules
 
 
     def forwardPass(self):
-        # TODO: For each Permutation fill capsAttributeValues 
-        # Calculate num Permuations using each     getNumObservations
-        # Fill some Shape with permutations and iterate that
-        permutations = []   # Pairs (Capsule, Observation Index)
-        # TODO: Num Entries as max number of inputs of all routes?
 
-        # FILL PERMUTATIONS USING:
-        # -1 = Zero Caps
-        # i = ith entry in Obs
-        # TEST:
-        for index in range(len(self._routes[0]._fromCapsules[0]._observations)):
-            permutations.append([(self._routes[0]._fromCapsules[0], index)])
+        # Create all Input Capsule Permutations
+        maxNumCaps, allInputCaps = self.getAllInputs()
+        permCapsList = [(None, -1)] * (maxNumCaps - 1)
+        for capsule in allInputCaps:
+            for index in range(capsule.getNumObservations()):
+                permCapsList.append((capsule, index))
 
+        permutations = [list(x) for x in itertools.permutations(permCapsList, maxNumCaps)]    
 
         for permutation in permutations:
-            inputAttributes = {}        # Route - {Capsule, {Attribute, Value}}
-            inputProbabilities = {}     # Route - {Capsule, Probability}
+            inputObservations = {}      # Route - Observation
             outputAttributes = {}       # Route - {Attribute, Value}
             probabilities = {}          # Route - Probability
             for route in self._routes: 
-
                 # Zero out capsules that are not part of this route
-                checkOff = copy.copy(permutation)
+                # TODO: The following still produces a ton of duplicates (Due to the None's, etc..)
+                #       This is "okay" as they get deleted later anyways, but an elegant
+                #       way is needed to reduce these to improve performance.
                 actualPermutation = []
-                for capsule in route.getFromCapsules():
-                    found = -1
-                    for index, capsObs in enumerate(checkOff):
-                        if capsObs[0] == capsule:
-                            actualPermutation.append(capsObs[1])
-                            found = index
-                            break
-                    if found == -1:
-                        actualPermutation.append(-1)
+                for index, capsule in enumerate(route.getFromCapsules()):
+                    if permutation[index][0] == capsule:
+                        actualPermutation.append(permutation[index][1])
                     else:
-                        del checkOff[found]
+                        actualPermutation.append(-1)
 
-                inputAttributes[route] = {}
-                inputProbabilities[route] = {}
+                inputObservations[route] = {}
                 inputs = {}
                 for index, capsule in enumerate(route.getFromCapsules()):
-                    inputAttributes[route][capsule] = capsule.getObservationOutput(actualPermutation[index])
-                    inputProbabilities[route][capsule] = capsule.getObservationProbability(actualPermutation[index])
-                    inputs.update(inputAttributes[route][capsule]) 
+                    inputObservations[route][capsule] = capsule.getObservation(actualPermutation[index])
+                    inputs.update(inputObservations[route][capsule].getOutputs(route.isSemantic())) 
 
                 # Routing by Agreement
                 # 1. Run gamma                      
@@ -223,7 +241,7 @@ class Capsule:
 
             # TODO: If above threshold, add Observation
             if probabilities[self._routes[0]] > HyperParameters.ProbabilityCutOff:
-                self._observations.append(Observation(self._routes[0], inputAttributes[self._routes[0]], outputAttributes[self._routes[0]], inputProbabilities[self._routes[0]], probabilities[self._routes[0]]))
+                self.addObservations(self._routes[0], [Observation(self, self._routes[0], list(inputObservations[self._routes[0]].values()), outputAttributes[self._routes[0]], probabilities[self._routes[0]])])
 
 
     def backwardPass(self, observation : Observation, withBackground : bool):
@@ -239,7 +257,8 @@ class Capsule:
 
         obsList = {}
         for capsule, attrValues in capsAttrValues.items():
-            obsList[capsule] = Observation(None, None, attrValues, None, observation.getInputProbability(capsule))
+            obsList[capsule] = Observation(capsule, None, [], attrValues, observation.getInputProbability(capsule))
+            observation.addInputObservation(obsList[capsule])    
 
         return obsList   # Capsule - Observation (with only outputs filled)
 

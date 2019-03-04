@@ -10,22 +10,16 @@ from keras import backend
 class NeuralNetG(NeuralNet):
 
     def beginTraining(self):
-        self.setTrainingParameters(20, 10, 4, 5)
+        self.setTrainingParameters(500, 50, 4, 5)
 
         
     def defineModel(self, inputShape : tuple, outputSize : int):
-        # TODO: Correct Shapes and Model for g
         model = Sequential()
         
-        model.add(Conv2D(8, (3, 3), padding='same', input_shape=inputShape))
-        model.add(Activation('tanh'))
+        model.add(Dense(128, activation='tanh', input_shape=inputShape))
         model.add(Dropout(0.25))
+        model.add(Dense(128, activation='tanh'))
 
-        model.add(Flatten())
-        model.add(Dense(128))
-        model.add(Activation('tanh'))
-        model.add(Dropout(0.25))
-        model.add(Dense(outputSize))
-        model.add(Activation('linear'))
+        model.add(Dense(outputSize, activation='linear'))
 
         return model

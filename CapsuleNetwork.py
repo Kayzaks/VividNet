@@ -50,10 +50,37 @@ class CapsuleNetwork:
             else:
                 pixelCapsule = self._pixelCapsules[filterShape]
 
-            currentCapsule.addNewRoute([pixelCapsule], self._renderer, primitive)
+            currentCapsule.addPrimitiveRoute(pixelCapsule, self._renderer, primitive)
         
         self._primitiveCapsules.append(currentCapsule)
         return currentCapsule
+
+
+    def addSemanticCapsule(self, name : str, fromObservations : list):
+        # fromObservations          # List of Observations for one Occurance
+        currentCapsule = Capsule(name)
+        currentCapsule.addSemanticRoute(fromObservations, self._attributePool)
+        
+        maxLayerID = -1
+        for obs in fromObservations:
+            currentLayer = self.getLayerIndex(obs.getCapsule())
+            if currentLayer > maxLayerID:
+                maxLayerID = currentLayer
+
+        if self._numSemanticLayers <= maxLayerID + 1:
+            self._semanticLayers[self._numSemanticLayers] = []
+            self._numSemanticLayers = self._numSemanticLayers + 1
+
+        self._semanticLayers[maxLayerID + 1].append(currentCapsule)
+        self._semanticCapsules.append(currentCapsule)
+
+
+    def getLayerIndex(self, capsule : Capsule):
+        for layerID in range(self._numSemanticLayers):
+            if capsule in self._semanticLayers[layerID]:
+                return layerID
+        
+        return -1
 
 
     def getAttributePool(self):
@@ -94,8 +121,8 @@ class CapsuleNetwork:
                         attributes[capsule.getAttributeByName(offsetLabelY)] = float(offsetY) / float(max(width, height))
                         attributes[capsule.getAttributeByName(offsetLabelRatio)] = float(filterShape[0]) / float(max(width, height))
 
-                        pixelObs = Observation(None, {}, attributes, None, 1.0)
-                        capsule.addObservation(pixelObs)
+                        pixelObs = Observation(capsule, None, [], attributes, 1.0)
+                        capsule.addPixelObservation(pixelObs)
 
         print("Forward Pass on all Primitive Capsules")
 
@@ -121,19 +148,29 @@ class CapsuleNetwork:
     def generateImage(self, width : int, height : int, observations : dict, withBackground : bool = False):
         # observations          # Capsule   -   List of Observations
         
-        obs = copy.copy(observations)
+        # We make a full copy to work on
+        obs = {}
+        for capsule, obsList in observations.items():
+            obs[capsule] = []
+            for observation in obsList:
+                obs[capsule].append(Observation(capsule, observation.getTakenRoute(), observation.getInputObservations(), 
+                                                observation.getOutputs(), observation.getProbability()))
 
+
+        # TODO: The following takes high level symbols and breaks them down into
+        #       Primitive ones. However, if these are already part of the input
+        #       Observations, they get drawn twice... 
         for layerIndex in range(self._numSemanticLayers - 1, -1, -1):
             # Iterate the list backwards
             for capsule in self._semanticLayers[layerIndex]:
                 if capsule in obs:
                     for observation in obs[capsule]:
-                        newObs = capsule.backwardPass(observation)
-                        for obsCaps, obsList in newObs:
+                        newObs = capsule.backwardPass(observation, False)
+                        for obsCaps, newObs in newObs.items():
                             if obsCaps in obs:
-                                obs[obsCaps].extend(obsList)
+                                obs[obsCaps].append(newObs)
                             else:
-                                obs[obsCaps] = obsList
+                                obs[obsCaps] = [newObs]
 
                     # Remove the parsed Observations
                     del obs[capsule]
@@ -141,8 +178,9 @@ class CapsuleNetwork:
         # Order all observations for the primitive capsules
         capsObsPairs = []
         for capsule, obsList in obs.items():
-            for observation in obsList:
-                capsObsPairs.append((capsule, observation))
+            if capsule in self._primitiveCapsules:
+                for observation in obsList:
+                    capsObsPairs.append((capsule, observation))
         capsObsPairs = sorted(capsObsPairs, key=lambda tup: tup[1].getProbability())
 
 

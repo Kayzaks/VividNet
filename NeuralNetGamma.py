@@ -19,15 +19,11 @@ class NeuralNetGamma(NeuralNet):
 
         model.add(Conv2D(16, (3, 3), activation='tanh', input_shape=inputShape))
         model.add(MaxPooling2D(pool_size=(2, 2)))
-        #model.add(Dropout(0.25))
-        #model.add(Conv2D(16, (3, 3), activation='tanh'))
-        #model.add(Dropout(0.25))
         model.add(Flatten())
 
         model.add(Dense(256, activation='tanh'))
         model.add(Dropout(0.25))
         model.add(Dense(128, activation='tanh'))
-        #model.add(Dropout(0.25))
 
         model.add(Dense(outputSize, activation='linear'))
         

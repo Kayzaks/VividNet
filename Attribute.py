@@ -1,4 +1,5 @@
 from AttributeType import AttributeType
+from AttributeType import AttributeLexical
 
 class Attribute:
 
@@ -11,6 +12,12 @@ class Attribute:
 
     def getName(self):
         return self._type.getName()
+
+    def isInheritable(self):
+        if self._type._lexical != AttributeLexical.NonTransmit and self._type._lexical != AttributeLexical.Pixel:
+            return True
+        else:
+            return False
 
     def setInherited(self):
         self._isInherited = True

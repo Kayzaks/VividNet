@@ -5,6 +5,7 @@ from NeuralNetGamma import NeuralNetGamma
 from NeuralNetG import NeuralNetG
 from Attribute import Attribute
 from Utility import Utility
+from Observation import Observation
 
 from GraphicsUserInterface import GraphicsUserInterface
 class CapsuleRoute:
@@ -28,16 +29,47 @@ class CapsuleRoute:
 
         self._isSemanticCapsule     : bool           = True
 
-        self.resizeInternals()
 
+    def addObservations(self, observation : Observation):
+        self._memory.addObservations(observation)
+
+    def clearObservations(self):
+        self._memory.clearObservations()
+
+    def getObservations(self):
+        return self._memory.getObservations()
+
+    def getObservation(self, index : int):
+        return self._memory.getObservation(index)
+
+    def getNumObservations(self):
+        return self._memory.getNumObservations()
+
+    def cleanupObservations(self, offsetLabelX : str, offsetLabelY : str, offsetLabelXRatio : str, offsetLabelYRatio : str, targetLabelX : str, targetLabelY : str):
+        self._memory.cleanupObservations(offsetLabelX, offsetLabelY, offsetLabelXRatio, offsetLabelYRatio, targetLabelX, targetLabelY)
+
+    def removeObservation(self, observation : Observation):
+        return self._memory.removeObservation(observation)
 
     def isSemantic(self):
         return self._isSemanticCapsule
 
 
-    def createSemanticRoute(self):
+    def createSemanticRoute(self, initialObservations : list):
         self._isSemanticCapsule = True
-        return
+
+        inputs = {}
+        for obs in initialObservations:
+            inputs.update(obs.getOutputs(True))
+
+        outputs = self.runGammaFunction(inputs)
+        newObservation = Observation(self._parentCapsule, self, initialObservations, outputs, 1.0)
+
+        self._memory.addSavedObservations([newObservation])
+        self._memory.setLambdaKnownGamma((lambda attributes : self.runGammaFunction(attributes)))
+                
+        self.resizeInternals()            
+
 
     def createPrimitiveRoute(self, gInputMapping : dict, gOutputMapping : dict, 
                                    gammaInputMapping : dict, gammaOutputMapping : dict,
@@ -60,6 +92,7 @@ class CapsuleRoute:
         if self._neuralNetGamma.hasTraining() is False:
             self.retrain()
 
+
     def getInputCount(self):
         return len(self._fromCapsules)
 
@@ -67,7 +100,7 @@ class CapsuleRoute:
         return self._fromCapsules
 
     def getInputAttributes(self):
-        return [item for sublist in [x.getAttributes() for x in self._fromCapsules] for item in sublist]
+        return [item for sublist in [x.getAttributes() for x in self._fromCapsules] for item in sublist if item.isInheritable() is True]
                 
     def getOutputAttributes(self):
         return self._parentCapsule.getAttributes()
@@ -92,32 +125,34 @@ class CapsuleRoute:
 
 
     def resizeInternals(self):
-        if self._isSemanticCapsule is True:
-            self._memory.inferXAttributes(self.getInputAttributes())
-            self._memory.inferYAttributes(self.getOutputAttributes())
+        # TODO: Check if anything actually changed
+        self._gInputMapping         : dict          = dict()  # Attribute - Index 
+        self._gOutputMapping        : dict          = dict()  # Index - Attribute
+        self._gammaInputMapping     : dict          = dict()  # Attribute - Index
+        self._gammaOutputMapping    : dict          = dict()  # Index - Attribute
 
-            self._gInputMapping         : dict          = dict()  # Attribute - Index 
-            self._gOutputMapping        : dict          = dict()  # Index - Attribute
-            self._gammaInputMapping     : dict          = dict()  # Attribute - Index
-            self._gammaOutputMapping    : dict          = dict()  # Index - Attribute
+        for idx, attribute in enumerate(self.getInputAttributes()):
+            self._gammaInputMapping[attribute] = idx
+            self._gOutputMapping[idx] = attribute
+            
+        for idx, attribute in enumerate(self.getOutputAttributes()):
+            self._gInputMapping[attribute] = idx
+            self._gammaOutputMapping[idx] = attribute
 
-            for idx, attribute in enumerate(self.getInputAttributes()):
-                self._gammaInputMapping[attribute] = idx
-                self._gOutputMapping[idx] = attribute
-                
-            for idx, attribute in enumerate(self.getOutputAttributes()):
-                self._gInputMapping[attribute] = idx
-                self._gammaOutputMapping[idx] = attribute
+        self._neuralNetG            : NeuralNetG     = NeuralNetG(self._gInputMapping, self._gammaInputMapping, self._name + "-g", True)
 
-            self._neuralNetG            : NeuralNetG     = NeuralNetG(self._gInputMapping, self._gammaInputMapping, self._name + "-g", True)
+        if self._neuralNetG.hasTraining() is True:
+            xx = 0
+            # TODO: Delete Previous Training File
 
+        # TODO: Only Retrain if changed!
+        if self._neuralNetG.hasTraining() is False:
             self.retrain()
-
 
 
     def retrain(self, showDebugOutput = True, specificSplit : list = None):
         if self._isSemanticCapsule is True:
-            return
+            self._neuralNetG.trainFromData(self._memory, showDebugOutput, specificSplit)
         else:
             self._neuralNetGamma.trainFromData(self._memory, showDebugOutput, specificSplit)
 
@@ -128,11 +163,18 @@ class CapsuleRoute:
         if self._isSemanticCapsule is False:
             return self._neuralNetGamma.forwardPass(attributes)
         else:
-            # TODO: Semantic Calculation
+            # TODO: ACTUAL Semantic Calculation
             outputs = {}
-            for index, attribute in self._gammaOutputMapping.items():
-                outputs[attribute] = 0.0
-            return outputs
+            for attribute in self.getOutputAttributes():
+                count = 0
+                aggregate = 0.0
+                for inAttr, inValue in attributes.items():
+                    if inAttr.getName() == attribute.getName():
+                        count = count + 1
+                        aggregate = aggregate + inValue
+
+                outputs[attribute] = aggregate / max(count, 1)
+            return outputs  # Attribute - Value
 
 
     def runGFunction(self, attributes : dict = None, isTraining : bool = True):
@@ -165,65 +207,4 @@ class CapsuleRoute:
             outputs[attribute] = Utility.windowFunction(value - attributes2[attribute], 0.1, 0.1)
             
         return outputs # Attribute - Value
-            
-
-#    def runGammaFunction(self):
-#        # TODO: Redesign?
-#        outputs : dict = dict()    # Attribute - Value
-#
-#        # Attributes covered by predefined known \gamma
-#        missingOutputs = self.getInputAttributes()
-#
-#        if self._gammaFunctionLambda is not None:
-#            oldMap : dict = dict()  # Index - Attribute
-#            for idx, attribute in enumerate(missingOutputs):
-#                oldMap[idx] = attribute
-#
-#            gammaInputs = Utility.mapData([x.getValue() for x in missingOutputs], oldMap, self._gammaInputMapping)
-#            outputs = Utility.mapDataOneWay(self._gammaFunctionLambda(gammaInputs), self._gammaOutputMapping)
-#
-#        # Attributes covered by general known \gamma
-#        missingOutputs = [x for x in missingOutputs if x not in outputs.keys()]
-#
-#        for attribute in missingOutputs:
-#            value = self.knownGammaAttributeFromInputs(attribute)
-#            if value is not None:
-#                outputs[attribute] = value
-#
-#
-#        # Attributes covered by unknown \gamma
-#        missingOutputs = [x for x in missingOutputs if x not in outputs.keys()]
-#
-#        finalResults = self._neuralNetGamma.runBlock(dict((x, x.getValue()) for x in missingOutputs))
-#        for attribute, value in finalResults:
-#            if attribute not in outputs:
-#                # We are this specific to avoid overriding already calculated attributes
-#                outputs[attribute] = value
-#
-#        return outputs
-
-
-
-#    def gNextBatch(self, batchSize):
-#        if self._isSemanticCapsule is False:
-#            return self._memory.nextBatch(batchSize, self._gammaInputMapping, self._gInputMapping)
-#        else:
-#            # TODO: Infer?
-#            return None
-#
-#
-#        
-#    def gammaNextBatch(self, batchSize):
-#        if self._isSemanticCapsule is True:
-#            # TODO: 
-#            return [[0], [0]]
-#        else:
-#            # TODO: Infer?
-#            return None
-#
-#
-#    def knownGammaAttributeFromInputs(self, attribute : Attribute):
-#        # TODO: Mean Calculations and Co.
-#
-#        # TODO: If NOT covered:
-#        return None
+        

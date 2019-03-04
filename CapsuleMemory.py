@@ -1,21 +1,24 @@
 from Attribute import Attribute
 from Utility import Utility
+from Observation import Observation
+from HyperParameters import HyperParameters
 import numpy
 
 # TODO: Merge all Lambda stuff into Route. Only generate Data here
 
 class CapsuleMemory:
 
-    def __init__(self):
-        self._pMapping          : dict  = dict() # Capsule   - Column
-        self._xMapping          : dict  = dict() # Attribute - Column
-        self._yMapping          : dict  = dict() # Attribute - Column
-        self._numEntries        : int   = 0
+    def __init__(self):        
+        self._observations      : list  = list() # Observation
+        self._savedObservations : list  = list() # Observation
+
         self._lambdaXMapping    : dict  = dict() # Column Index - Attribute
         self._lambdaYMapping    : dict  = dict() # Column Index - Attribute
         self._lambdaYGenerator          = None   #      -> Rand Y
-        self._lambdaXInferer            = None   # Y    -> X  
+        self._lambdaXInferer            = None   # Y    -> X      
         self._lambdaYInferer            = None   # X    -> Y
+
+        self._lambdaY                   = None   # X {Attribute - Value} - Y {Attribute - Value}
 
         self._indexInEpoch      : int   = 0
         self._epochsCompleted   : int   = 0
@@ -30,75 +33,78 @@ class CapsuleMemory:
         self._lambdaXMapping = xMapping
         self._lambdaYMapping = yMapping
         
-    def setLambdaKnownGamma(self, lambdaYInferer, xMapping : dict, yMapping : dict):
+    def setLambdaKnownGamma(self, lambdaY):
         # xMapping  # Column Index - Attribute
         # yMapping  # Column Index - Attribute
-        self._lambdaYInferer = lambdaYInferer
-        self._lambdaXMapping = xMapping
-        self._lambdaYMapping = yMapping
-
-
-    def inferXAttributes(self, attributes : list):
-        # Add new Attributes
-        for attribute in attributes:
-            if attribute not in self._xMapping:
-                self._xMapping[attribute] = [0.0] * self._numEntries
-        # Remove Attributes
-        removeList : list = list() 
-        for attribute in self._xMapping.keys():
-            if attribute not in attributes:
-                removeList.append(attribute)
-        for attribute in removeList:
-            del self._xMapping[attribute]
-
-
-    def inferYAttributes(self, attributes : list):
-        # Add new Attributes
-        for attribute in attributes:
-            if attribute not in self._yMapping:
-                self._yMapping[attribute] = [0.0] * self._numEntries
-        # Remove Attributes
-        removeList : list = list() 
-        for attribute in self._yMapping.keys():
-            if attribute not in attributes:
-                removeList.append(attribute)
-        for attribute in removeList:
-            del self._yMapping[attribute]
+        self._lambdaY = lambdaY
             
     
-    def addDataPoint(self, inputAttributes : list, outputAttributes : list, inputActivations : list):
-        # Prefill, in case there are attributes missing
-        for column in self._xMapping.values():
-            column.append(0.0)
-        for column in self._yMapping.values():
-            column.append(0.0)
+    def addObservations(self, observation : list):
+        self._observations.extend(observation)
+    
+    def addSavedObservations(self, observation : list):
+        self._savedObservations.extend(observation)
 
-        self._numEntries = self._numEntries + 1
+    def clearObservations(self):
+        # TODO: Decide when to save and when not to
+        self._savedObservations.extend(self._observations)
+        self._observations = []
 
-        for attribute in inputAttributes:
-            if attribute in self._xMapping:
-                self._xMapping[attribute][-1] = attribute.getValue()
-        for attribute in outputAttributes:
-            if attribute in self._yMapping:
-                self._yMapping[attribute][-1] = attribute.getValue()
-        for capsule, prob in inputActivations:
-            if capsule in self._pMapping:
-                self._pMapping[capsule].append(prob)
+    def getObservations(self):
+        return self._observations
 
-        self._scrambled = None
-        self._indexInEpoch = 0
-        self._epochsCompleted = 0
+    def getObservation(self, index : int):
+        return self._observations[index]
+
+    def getNumObservations(self):
+        return len(self._observations)
+
+    def cleanupObservations(self, offsetLabelX : str, offsetLabelY : str, offsetLabelXRatio : str, offsetLabelYRatio : str, targetLabelX : str, targetLabelY : str):
+        for observation in self._observations:
+            observation.offset(offsetLabelX, offsetLabelY, offsetLabelXRatio, offsetLabelYRatio, targetLabelX, targetLabelY)
+
+        sortedObs = sorted(self._observations, reverse = True, key = (lambda x : x.getProbability()))
+        
+        for index, obs in enumerate(sortedObs):
+            for index2 in range(index + 1, len(sortedObs)):
+                if sortedObs[index2] in self._observations:
+                    if self.checkSimilarObservations(obs.getOutputs(), sortedObs[index2].getOutputs()) > HyperParameters.SimilarObservationsCutOff:
+                        self.removeObservation(sortedObs[index2])
 
 
-    def transformDataPoint(self, currentRow : int):
+    def removeObservation(self, observation : Observation):
+        if observation in self._observations:
+            self._observations.remove(observation)
+            return True
+        return False
+
+
+    def checkSimilarObservations(self, attributes1 : dict, attributes2 : dict):
+        # attributes1       # Attribute - Value
+        # attributes2       # Attribute - Value
+        agreement = {}
+        for attribute, value in attributes1.items():
+            agreement[attribute] = Utility.windowFunction(value - attributes2[attribute], 0.1, 0.1)
+            
+        if len(agreement) == 0:
+            return 0.0
+
+        total = 0.0 
+        for value in agreement.values():
+            total = total + value
+        total = total / float(len(agreement))
+
+        return total
+
+
+    def transformDataPoint(self, observation : Observation):
         outX = {}   # Attribute  - Value
         outY = {}   # Attribute  - Value
 
-        for key, value in self._xMapping:
-            # TODO: Transform X
-            # TODO: Every nth iteration use original?
-            outX[key] = value[currentRow]
-            outY = Utility.mapDataOneWay(self._lambdaYInferer(Utility.mapDataOneWayDict(outX, self._lambdaXMapping)), self._lambdaYMapping)
+        # TODO: Do Preposition transformations
+        # TODO: Do Adjective transformations
+        outX = observation.getInputs()
+        outY = observation.getOutputs()
 
         return outX, outY 
 
@@ -114,11 +120,7 @@ class CapsuleMemory:
         yData = [[]] * batchSize
         xData = [[]] * batchSize
 
-        if self._scrambled is None:                
-            self._scrambled = numpy.arange(0, self._numEntries) 
-            numpy.random.shuffle(self._scrambled)  
-
-        if self._numEntries == 0:
+        if self._lambdaXInferer is not None and self._lambdaYGenerator is not None:
             # Only create Fictive Data
             for idx in range(batchSize):
                 lyData = self._lambdaYGenerator()
@@ -131,20 +133,18 @@ class CapsuleMemory:
                 xData[idx] = [0.0] * len(inputMap)
                 yData[idx] = [0.0] * len(outputMap)
 
-                xVals, yVals = self.transformDataPoint(self._scrambled[self._indexInEpoch])
+                xVals, yVals = self.transformDataPoint(self._savedObservations[self._indexInEpoch])
 
-                for key, value in inputMap:
-                    if key in self._xMapping:
+                for key, value in inputMap.items():
+                    if key in xVals:
                         xData[idx][value] = xVals[key]
-                for key, value in outputMap:
-                    if key in self._yMapping:
+                for key, value in outputMap.items():
+                    if key in yVals:
                         yData[idx][value] = yVals[key]
 
                 self._indexInEpoch = self._indexInEpoch + 1
-                if self._indexInEpoch > self._numEntries:
+                if self._indexInEpoch >= len(self._savedObservations):
                     self._indexInEpoch = 0
-                    self._epochsCompleted = self._epochsCompleted + 1                
-                    self._scrambled = numpy.arange(0, self._numEntries) 
-                    numpy.random.shuffle(self._scrambled) 
+                    self._epochsCompleted = self._epochsCompleted + 1     
 
         return (xData, yData)

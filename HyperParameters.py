@@ -2,7 +2,7 @@
 
 class HyperParameters:
     # Capsules
-    SimilarObservationsCutOff = 0.64
+    SimilarObservationsCutOff = 0.2
     ProbabilityCutOff = 0.7
 
     # Learning
