@@ -3,8 +3,8 @@ from Utility import Utility
 from Observation import Observation
 from HyperParameters import HyperParameters
 import numpy
-
-# TODO: Merge all Lambda stuff into Route. Only generate Data here
+import random
+import math
 
 class CapsuleMemory:
 
@@ -34,8 +34,6 @@ class CapsuleMemory:
         self._lambdaYMapping = yMapping
         
     def setLambdaKnownGamma(self, lambdaY):
-        # xMapping  # Column Index - Attribute
-        # yMapping  # Column Index - Attribute
         self._lambdaY = lambdaY
             
     
@@ -59,16 +57,20 @@ class CapsuleMemory:
     def getNumObservations(self):
         return len(self._observations)
 
-    def cleanupObservations(self, offsetLabelX : str, offsetLabelY : str, offsetLabelXRatio : str, offsetLabelYRatio : str, targetLabelX : str, targetLabelY : str):
-        for observation in self._observations:
-            observation.offset(offsetLabelX, offsetLabelY, offsetLabelXRatio, offsetLabelYRatio, targetLabelX, targetLabelY)
+
+
+
+    def cleanupObservations(self, offsetLabelX : str, offsetLabelY : str, offsetLabelRatio : str, targetLabelX : str, targetLabelY : str, targetLabelSize : str):
+        if offsetLabelX is not None and offsetLabelY is not None and offsetLabelRatio is not None:
+            for observation in self._observations:
+                observation.offset(offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize)
 
         sortedObs = sorted(self._observations, reverse = True, key = (lambda x : x.getProbability()))
         
         for index, obs in enumerate(sortedObs):
             for index2 in range(index + 1, len(sortedObs)):
                 if sortedObs[index2] in self._observations:
-                    if self.checkSimilarObservations(obs.getOutputs(), sortedObs[index2].getOutputs()) > HyperParameters.SimilarObservationsCutOff:
+                    if CapsuleMemory.checkSimilarObservations(obs.getOutputs(), sortedObs[index2].getOutputs()) > HyperParameters.SimilarObservationsCutOff:
                         self.removeObservation(sortedObs[index2])
 
 
@@ -79,34 +81,45 @@ class CapsuleMemory:
         return False
 
 
-    def checkSimilarObservations(self, attributes1 : dict, attributes2 : dict):
-        # attributes1       # Attribute - Value
-        # attributes2       # Attribute - Value
-        agreement = {}
-        for attribute, value in attributes1.items():
-            agreement[attribute] = Utility.windowFunction(value - attributes2[attribute], 0.1, 0.1)
-            
-        if len(agreement) == 0:
-            return 0.0
-
-        total = 0.0 
-        for value in agreement.values():
-            total = total + value
-        total = total / float(len(agreement))
-
-        return total
-
 
     def transformDataPoint(self, observation : Observation):
-        outX = {}   # Attribute  - Value
-        outY = {}   # Attribute  - Value
+        inputs = {}   # Attribute  - Value
+        outputs = {}   # Attribute  - Value
 
         # TODO: Do Preposition transformations
         # TODO: Do Adjective transformations
-        outX = observation.getInputs()
-        outY = observation.getOutputs()
+        inputs = observation.getInputs()
+        outputs = self._lambdaY(inputs)
 
-        return outX, outY 
+        centerX = [value for (key, value) in outputs.items() if key.getName() == "Position-X"][0]
+        centerY = [value for (key, value) in outputs.items() if key.getName() == "Position-Y"][0]
+
+        deltaX = (random.random() - 0.5) * 2.0
+        deltaY = (random.random() - 0.5) * 2.0
+        deltaRotate = (random.random() - 0.5) * 2.0
+        deltaSize = (random.random() - 0.5) * 2.0
+
+        # Rotation
+        for observation in observation.getInputObservations():
+            xAttr = observation.getCapsule().getAttributeByName("Position-X")
+            yAttr = observation.getCapsule().getAttributeByName("Position-Y")
+            rotAttr = observation.getCapsule().getAttributeByName("Rotation")
+            sizeAttr = observation.getCapsule().getAttributeByName("Size")
+
+            # Move to Origin
+            inputs[xAttr] = inputs[xAttr] - centerX
+            inputs[yAttr] = inputs[yAttr] - centerY
+
+            # Do Rotations
+            #inputs[rotAttr] = (inputs[rotAttr] + deltaRotate) % 1.0
+            #inputs[xAttr] = inputs[xAttr] * math.cos(-inputs[rotAttr] * math.pi * 2.0) - inputs[yAttr] * math.sin(-inputs[rotAttr] * math.pi * 2.0)
+            #inputs[yAttr] = inputs[xAttr] * math.sin(-inputs[rotAttr] * math.pi * 2.0) + inputs[yAttr] * math.cos(-inputs[rotAttr] * math.pi * 2.0)
+
+            # Move away from Origin and translate
+            inputs[xAttr] = inputs[xAttr] + centerX + deltaX
+            inputs[yAttr] = inputs[yAttr] + centerY + deltaY
+
+        return inputs, self._lambdaY(inputs) 
 
 
     def runXInferer(self, attributes : list, isTraining : bool):
@@ -148,3 +161,23 @@ class CapsuleMemory:
                     self._epochsCompleted = self._epochsCompleted + 1     
 
         return (xData, yData)
+
+
+        
+    @staticmethod
+    def checkSimilarObservations(attributes1 : dict, attributes2 : dict):
+        # attributes1       # Attribute - Value
+        # attributes2       # Attribute - Value
+        agreement = {}
+        for attribute, value in attributes1.items():
+            agreement[attribute] = Utility.windowFunction(value - attributes2[attribute], 0.1, 0.1)
+            
+        if len(agreement) == 0:
+            return 0.0
+
+        total = 0.0 
+        for value in agreement.values():
+            total = total + value
+        total = total / float(len(agreement))
+
+        return total

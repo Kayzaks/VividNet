@@ -3,6 +3,7 @@ from AttributePool import AttributePool
 from CapsuleMemory import CapsuleMemory
 from CapsuleRoute import CapsuleRoute
 from Observation import Observation
+from Utility import Utility
 
 from PrimitivesRenderer import PrimitivesRenderer
 from PrimitivesRenderer import Primitives
@@ -141,18 +142,19 @@ class Capsule:
 
 
     def getObservation(self, index : int):
-        currentIndex = index
-        for route in self._routes:
-            if index < route.getNumObservations():
-                return route.getObservation(index)
-            currentIndex = currentIndex - route.getNumObservations()
-        
-        if index < len(self._pixelObservations):
-            return self._pixelObservations[index]
+        if index >= 0:
+            currentIndex = index
+            for route in self._routes:
+                if index < route.getNumObservations():
+                    return route.getObservation(index)
+                currentIndex = currentIndex - route.getNumObservations()
+            
+            if index < len(self._pixelObservations):
+                return self._pixelObservations[index]
 
         # Otherwise, Zero Observation
         zeroDict = {}
-        for attribute in self._attributes:
+        for attribute in self._attributes.values():
             zeroDict[attribute] = 0.0
         return Observation(self, None, [], zeroDict, 0.0)
 
@@ -165,9 +167,9 @@ class Capsule:
         return numObs
 
 
-    def cleanupObservations(self, offsetLabelX : str, offsetLabelY : str, offsetLabelXRatio : str, offsetLabelYRatio : str, targetLabelX : str, targetLabelY : str):
+    def cleanupObservations(self, offsetLabelX : str = None, offsetLabelY : str = None, offsetLabelRatio : str = None, targetLabelX : str = None, targetLabelY : str = None, targetLabelSize : str = None):
         for route in self._routes:
-            route.cleanupObservations(offsetLabelX, offsetLabelY, offsetLabelXRatio, offsetLabelYRatio, targetLabelX, targetLabelY)
+            route.cleanupObservations(offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize)
 
 
     def removeObservation(self, observation : Observation):
@@ -229,10 +231,20 @@ class Capsule:
                 # 2. Run g
                 expectedInputs = route.runGFunction(outputAttributes[route], False)
 
+                # TODO: Should be split by capsule!!!
                 # 3. Calculate activation probability
                 agreement = route.agreementFunction(inputs, expectedInputs)
+
                 # TODO: Rest of agreement
-                probabilities[route] = self.calculateRouteProbability(agreement)
+                probabilities[route] = self.calculateRouteProbability(agreement, inputObservations[route])
+
+                # TEST:
+                #if probabilities[route] > HyperParameters.ProbabilityCutOff and self.getName() == "Player":
+                #    print("------ Test ------")
+                #    for inp, value in inputs.items():
+                #        print("Input-" + inp.getName() + " : " + str(value))
+                #    for inp, value in expectedInputs.items():
+                #        print("Expected-" + inp.getName() + " : " + str(value))
 
                 # 4. repeat for all routes
 
@@ -240,7 +252,7 @@ class Capsule:
             # 5. Find most likely route
 
             # TODO: If above threshold, add Observation
-            if probabilities[self._routes[0]] > HyperParameters.ProbabilityCutOff:
+            if self._name == "Player" or probabilities[self._routes[0]] > HyperParameters.ProbabilityCutOff:
                 self.addObservations(self._routes[0], [Observation(self, self._routes[0], list(inputObservations[self._routes[0]].values()), outputAttributes[self._routes[0]], probabilities[self._routes[0]])])
 
 
@@ -263,15 +275,22 @@ class Capsule:
         return obsList   # Capsule - Observation (with only outputs filled)
 
 
-    def calculateRouteProbability(self, agreement : dict):
+    def calculateRouteProbability(self, agreement : dict, observations : dict):
         # agreement         # Attribute - Value
-        if len(agreement) == 0:
-            return 0.0
-        total = 0.0 
-        for value in agreement.values():
-            total = total + value
-        total = total / float(len(agreement))
+        # observations      # Capsule - Observation
 
-        # TODO: Missing input probabilities, etc..
+        total = 0.0
+        for capsule, observation in observations.items():
+            perCaps = 0.0
+            attrCount = 0
+            for attribute, value in agreement.items():
+                if capsule.hasAttribute(attribute):
+                    perCaps = perCaps + value
+                    attrCount = attrCount + 1
+            # TODO: Missing the Mean probability
+            perCaps = (perCaps / float(max(1, attrCount))) * Utility.windowFunction(observation.getProbability() - 1, 0.0, 1.0)
+            total = total + perCaps
+
+        total = total / len(observations)
 
         return total

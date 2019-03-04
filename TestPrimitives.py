@@ -42,8 +42,8 @@ def cudaKernelCircle(ioArray, width, height, attributes):
             FF[uu, vv] = attributes[index]
             index = index + 1
 
-    intensity1 = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi)) / attributes[4]
-    intensity2 = (xx - (attributes[0])) * math.sin(-attributes[3] * math.pi)+(yy - (attributes[1])) * math.cos(-attributes[3] * math.pi)
+    intensity1 = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi * 2.0)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi * 2.0)) / attributes[4]
+    intensity2 = (xx - (attributes[0])) * math.sin(-attributes[3] * math.pi * 2.0)+(yy - (attributes[1])) * math.cos(-attributes[3] * math.pi * 2.0)
     intensity =  cudaWindowFunction(math.sqrt(intensity1 * intensity1 + intensity2 * intensity2) - attributes[2] * 0.5, (attributes[6] * 0.1) + 0.025)
 
     depth = 1.0 - intensity
@@ -75,8 +75,8 @@ def cudaKernelSquare(ioArray, width, height, attributes):
             FF[uu, vv] = attributes[index]
             index = index + 1
 
-    intensity1 = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi * 0.5)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi * 0.5)) / attributes[4]
-    intensity2 = (xx - (attributes[0])) * math.sin(-attributes[3] * math.pi * 0.5)+(yy - (attributes[1])) * math.cos(-attributes[3] * math.pi * 0.5)
+    intensity1 = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi * 2.0)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi * 2.0)) / attributes[4]
+    intensity2 = (xx - (attributes[0])) * math.sin(-attributes[3] * math.pi * 2.0)+(yy - (attributes[1])) * math.cos(-attributes[3] * math.pi * 2.0)
     intensity1 = abs(intensity1) - attributes[2] * 0.5 
     intensity2 = abs(intensity2) - attributes[2] * 0.5
     intensity =  cudaWindowFunction( max(intensity1, 0.0) + max(intensity2, 0.0) + min(max(intensity1, intensity2),0.0), (attributes[6] * 0.1) + 0.025)
@@ -147,14 +147,15 @@ class TestRenderer(PrimitivesRenderer):
         # Center of Primitive fixated at center
         outList[0] = 0.5
         outList[1] = 0.5
+
         # Minimum Size
         outList[2] = max(0.2, outList[2])
         outList[4] = max(0.5, outList[4])
         # No "invisible" Primitive
         outList[6] = max(0.1, outList[6])
 
-        #for idx in range(DCTDIMENSION * DCTDIMENSION):
-        #    outList[7 + idx] = np.random.normal(0.5, 0.15)
+        # Limit Rotations to 0 - Pi (Rotationally symmetric)
+        outList[3] = outList[3] * 0.5
 
         return outList
 

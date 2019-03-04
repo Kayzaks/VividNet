@@ -73,6 +73,7 @@ class CapsuleNetwork:
 
         self._semanticLayers[maxLayerID + 1].append(currentCapsule)
         self._semanticCapsules.append(currentCapsule)
+        return currentCapsule
 
 
     def getLayerIndex(self, capsule : Capsule):
@@ -138,16 +139,13 @@ class CapsuleNetwork:
             print("Forward Pass on Layer " + str(layer) + " of Semantic Capsules")
             for capsule in self._semanticLayers[layer]:
                 capsule.forwardPass()
+                capsule.cleanupObservations()
                 allObs[capsule] = capsule.getObservations()
 
         return allObs   # Capsule - List Of Observations
 
         
-
-
-    def generateImage(self, width : int, height : int, observations : dict, withBackground : bool = False):
-        # observations          # Capsule   -   List of Observations
-        
+    def produce(self, observations : dict):
         # We make a full copy to work on
         obs = {}
         for capsule, obsList in observations.items():
@@ -156,10 +154,6 @@ class CapsuleNetwork:
                 obs[capsule].append(Observation(capsule, observation.getTakenRoute(), observation.getInputObservations(), 
                                                 observation.getOutputs(), observation.getProbability()))
 
-
-        # TODO: The following takes high level symbols and breaks them down into
-        #       Primitive ones. However, if these are already part of the input
-        #       Observations, they get drawn twice... 
         for layerIndex in range(self._numSemanticLayers - 1, -1, -1):
             # Iterate the list backwards
             for capsule in self._semanticLayers[layerIndex]:
@@ -175,6 +169,44 @@ class CapsuleNetwork:
                     # Remove the parsed Observations
                     del obs[capsule]
 
+
+    def generateImage(self, width : int, height : int, observations : dict, withBackground : bool = False):
+        # observations          # Capsule   -   List of Observations
+
+        semantics = []
+        texts = []
+        offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize = self._renderer.getOffsetLabels()
+        
+
+        # We make a full copy to work on
+        obs = {}
+        for capsule, obsList in observations.items():
+            obs[capsule] = []
+            for observation in obsList:
+                obs[capsule].append(Observation(capsule, observation.getTakenRoute(), observation.getInputObservations(), 
+                                                observation.getOutputs(), observation.getProbability()))
+
+        # Generate Semantic Labels for Semantic Capsules
+        for capsule, obsList in obs.items():
+            if capsule in self._semanticCapsules:
+                for observation in obsList:
+                    xOffset1 = observation.getOutput(capsule.getAttributeByName(targetLabelX))
+                    yOffset1 = observation.getOutput(capsule.getAttributeByName(targetLabelY))
+                    
+                    xOffset1 = int(xOffset1 * float(max(width, height)))
+                    yOffset1 = int(yOffset1 * float(max(width, height)))
+
+                    for inObs in observation.getInputObservations():
+                        xOffset2 = inObs.getOutput(inObs.getCapsule().getAttributeByName(targetLabelX))
+                        yOffset2 = inObs.getOutput(inObs.getCapsule().getAttributeByName(targetLabelY))
+                        
+                        xOffset2 = int(xOffset2 * float(max(width, height)))
+                        yOffset2 = int(yOffset2 * float(max(width, height)))
+
+                        semantics.append(patches.Arrow(xOffset1, yOffset1, xOffset2 - xOffset1, yOffset2 - yOffset1, linewidth = 1, edgecolor = 'r', facecolor = 'none' ))
+                        
+                    semantics.append(patches.Circle((xOffset1, yOffset1), radius = 1, color = 'r'))    
+
         # Order all observations for the primitive capsules
         capsObsPairs = []
         for capsule, obsList in obs.items():
@@ -184,9 +216,6 @@ class CapsuleNetwork:
         capsObsPairs = sorted(capsObsPairs, key=lambda tup: tup[1].getProbability())
 
 
-        offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize = self._renderer.getOffsetLabels()
-        semantics = []
-        texts = []
         image = np.zeros(width * height * 4)
 
         for capsule, observation in capsObsPairs:            

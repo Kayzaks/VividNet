@@ -10,14 +10,13 @@ from keras import backend
 class NeuralNetG(NeuralNet):
 
     def beginTraining(self):
-        self.setTrainingParameters(500, 50, 4, 5)
+        self.setTrainingParameters(30000, 1000, 4, 2)
 
         
     def defineModel(self, inputShape : tuple, outputSize : int):
         model = Sequential()
         
         model.add(Dense(128, activation='tanh', input_shape=inputShape))
-        model.add(Dropout(0.25))
         model.add(Dense(128, activation='tanh'))
 
         model.add(Dense(outputSize, activation='linear'))

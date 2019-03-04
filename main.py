@@ -29,13 +29,13 @@ if __name__ == '__main__':
     squareCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Square, [(width, height)])
     circleCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Circle, [(width, height)])   
 
-    #for i in range(1):
-    #    squareCapsule.continueTraining(True, [0, 1])
-    #    circleCapsule.continueTraining(True, [0, 1])
-        
-    #for i in range(5):
-    #    squareCapsule.continueTraining(True, [0, 1])
-    #    circleCapsule.continueTraining(True, [0])
+    for i in range(1):
+        squareCapsule.continueTraining(True, [0, 1])
+#        circleCapsule.continueTraining(True, [0, 1])
+#        
+#    for i in range(5):
+#        squareCapsule.continueTraining(True, [0])
+#        circleCapsule.continueTraining(True, [0])
 
 
     allObs = {circleCapsule : [], squareCapsule : []}
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     obsDicts.append({ circleCapsule.getAttributeByName("Position-X") : 0.4,
                 circleCapsule.getAttributeByName("Position-Y") : 0.6,
                 circleCapsule.getAttributeByName("Size") : 0.25,
-                circleCapsule.getAttributeByName("Rotation") : 0.75,
+                circleCapsule.getAttributeByName("Rotation") : 0.375,
                 circleCapsule.getAttributeByName("Aspect-Ratio") : 0.7,
                 circleCapsule.getAttributeByName("Intensity") : 0.1,
                 circleCapsule.getAttributeByName("Strength") : 0.7 })
@@ -83,7 +83,7 @@ if __name__ == '__main__':
     obsDicts.append({ squareCapsule.getAttributeByName("Position-X") : 0.6,
                 squareCapsule.getAttributeByName("Position-Y") : 0.4,
                 squareCapsule.getAttributeByName("Size") : 0.25,
-                squareCapsule.getAttributeByName("Rotation") : 0.5,
+                squareCapsule.getAttributeByName("Rotation") : 0.125,
                 squareCapsule.getAttributeByName("Aspect-Ratio") : 0.7,
                 squareCapsule.getAttributeByName("Intensity") : 0.6,
                 squareCapsule.getAttributeByName("Strength") : 0.7 })
@@ -111,7 +111,7 @@ if __name__ == '__main__':
 
 
     playerCapsule = capsNet.addSemanticCapsule("Player", [allObs[squareCapsule][0], allObs[circleCapsule][0]])  
-
+           
 
     imageReal, semantics, texts = capsNet.generateImage(shape[0], shape[0], allObs, False)
     allObs = capsNet.showInput(imageReal, shape[0], shape[1], 1)

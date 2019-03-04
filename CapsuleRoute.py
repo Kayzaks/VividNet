@@ -45,8 +45,8 @@ class CapsuleRoute:
     def getNumObservations(self):
         return self._memory.getNumObservations()
 
-    def cleanupObservations(self, offsetLabelX : str, offsetLabelY : str, offsetLabelXRatio : str, offsetLabelYRatio : str, targetLabelX : str, targetLabelY : str):
-        self._memory.cleanupObservations(offsetLabelX, offsetLabelY, offsetLabelXRatio, offsetLabelYRatio, targetLabelX, targetLabelY)
+    def cleanupObservations(self, offsetLabelX : str, offsetLabelY : str, offsetLabelRatio : str, targetLabelX : str, targetLabelY : str, targetLabelSize : str):
+        self._memory.cleanupObservations(offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize)
 
     def removeObservation(self, observation : Observation):
         return self._memory.removeObservation(observation)
