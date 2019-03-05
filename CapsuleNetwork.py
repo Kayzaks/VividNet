@@ -145,31 +145,6 @@ class CapsuleNetwork:
         return allObs   # Capsule - List Of Observations
 
         
-    def produce(self, observations : dict):
-        # We make a full copy to work on
-        obs = {}
-        for capsule, obsList in observations.items():
-            obs[capsule] = []
-            for observation in obsList:
-                obs[capsule].append(Observation(capsule, observation.getTakenRoute(), observation.getInputObservations(), 
-                                                observation.getOutputs(), observation.getProbability()))
-
-        for layerIndex in range(self._numSemanticLayers - 1, -1, -1):
-            # Iterate the list backwards
-            for capsule in self._semanticLayers[layerIndex]:
-                if capsule in obs:
-                    for observation in obs[capsule]:
-                        newObs = capsule.backwardPass(observation, False)
-                        for obsCaps, newObs in newObs.items():
-                            if obsCaps in obs:
-                                obs[obsCaps].append(newObs)
-                            else:
-                                obs[obsCaps] = [newObs]
-
-                    # Remove the parsed Observations
-                    del obs[capsule]
-
-
     def generateImage(self, width : int, height : int, observations : dict, withBackground : bool = False):
         # observations          # Capsule   -   List of Observations
 
@@ -183,6 +158,7 @@ class CapsuleNetwork:
         for capsule, obsList in observations.items():
             obs[capsule] = []
             for observation in obsList:
+                # TODO: Input Observations are still the original..
                 obs[capsule].append(Observation(capsule, observation.getTakenRoute(), observation.getInputObservations(), 
                                                 observation.getOutputs(), observation.getProbability()))
 
@@ -206,6 +182,25 @@ class CapsuleNetwork:
                         semantics.append(patches.Arrow(xOffset1, yOffset1, xOffset2 - xOffset1, yOffset2 - yOffset1, linewidth = 1, edgecolor = 'r', facecolor = 'none' ))
                         
                     semantics.append(patches.Circle((xOffset1, yOffset1), radius = 1, color = 'r'))    
+
+
+        for layerIndex in range(self._numSemanticLayers - 1, -1, -1):
+            # Iterate the list backwards
+            for capsule in self._semanticLayers[layerIndex]:
+                if capsule in obs:
+                    for observation in obs[capsule]:
+                        # Only top level observed symbols that have not yet been generated
+                        if not observation.getInputObservations():
+                            newObs = capsule.backwardPass(observation, False)
+                            for obsCaps, newObs in newObs.items():
+                                if obsCaps in obs:
+                                    obs[obsCaps].append(newObs)
+                                else:
+                                    obs[obsCaps] = [newObs]
+
+                    # Remove the parsed Observations
+                    del obs[capsule]
+
 
         # Order all observations for the primitive capsules
         capsObsPairs = []
