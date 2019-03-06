@@ -53,6 +53,7 @@ class Capsule:
 
         self._routes.append(newRoute)
         
+
     def addSemanticRoute(self, fromObservations : list, attributePool : AttributePool):
         numRoutes = len(self._routes)
         fromCapsules = []
@@ -130,6 +131,7 @@ class Capsule:
     def clearObservations(self):
         for route in self._routes:
             route.clearObservations()
+        self._pixelObservations = []
 
 
     def getObservations(self):
@@ -200,6 +202,8 @@ class Capsule:
             for index in range(capsule.getNumObservations()):
                 permCapsList.append((capsule, index))
 
+        # TODO: Add Symmetry Permutations
+
         permutations = [list(x) for x in itertools.permutations(permCapsList, maxNumCaps)]    
 
         for permutation in permutations:
@@ -252,7 +256,7 @@ class Capsule:
             # 5. Find most likely route
 
             # TODO: If above threshold, add Observation
-            if self._name == "Player" or probabilities[self._routes[0]] > HyperParameters.ProbabilityCutOff:
+            if probabilities[self._routes[0]] > HyperParameters.ProbabilityCutOff:
                 self.addObservations(self._routes[0], [Observation(self, self._routes[0], list(inputObservations[self._routes[0]].values()), outputAttributes[self._routes[0]], probabilities[self._routes[0]])])
 
 
@@ -278,14 +282,14 @@ class Capsule:
     def calculateRouteProbability(self, agreement : dict, observations : dict):
         # agreement         # Attribute - Value
         # observations      # Capsule - Observation
-
+        
         total = 0.0
         for capsule, observation in observations.items():
             perCaps = 0.0
             attrCount = 0
             for attribute, value in agreement.items():
                 if capsule.hasAttribute(attribute):
-                    perCaps = perCaps + value
+                    perCaps = perCaps + abs(value)
                     attrCount = attrCount + 1
             # TODO: Missing the Mean probability
             perCaps = (perCaps / float(max(1, attrCount))) * Utility.windowFunction(observation.getProbability() - 1, 0.0, 1.0)

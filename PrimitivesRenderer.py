@@ -10,7 +10,7 @@ from AttributePool import AttributePool
 from Attribute import Attribute
 from AttributeType import AttributeLexical
 from Utility import Utility
-
+from HyperParameters import HyperParameters
 
 
 
@@ -172,7 +172,7 @@ class PrimitivesRenderer:
         # TODO: Max Intensity according to dimension?
         for uu in range(dctDimension):
             for vv in range(dctDimension):
-                intensity = ((128.0 * float(dctDimension) * 2.0) / ((max(uu, vv) + 1)))  
+                intensity = ((128.0 * float(dctDimension) * 2.0) / ((max(uu, vv) + 1))) # TEST * 2.0
                 attributes[startIndex + (uu * dctDimension) + vv] = (attributes[startIndex + (uu * dctDimension) + vv] - 0.5) * intensity 
         
         return attributes
@@ -220,7 +220,7 @@ class PrimitivesRenderer:
                 # We only check those pixels that contain the actual primitive and not just background
                 if depth < 1.0:
                     intensityAttr = capsule.getAttributeByName("PixelC-" + str(xx) + "-" + str(yy))
-                    outputs[intensityAttr] = Utility.windowFunction(attributes1[intensityAttr] - attributes2[intensityAttr], 0.1, 0.1)
+                    outputs[intensityAttr] = Utility.windowFunction(attributes1[intensityAttr] - attributes2[intensityAttr], HyperParameters.PrimAgreementWidth, HyperParameters.PrimAgreementFallOff)
         return outputs
 
 

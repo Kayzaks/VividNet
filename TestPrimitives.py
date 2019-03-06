@@ -49,7 +49,7 @@ def cudaKernelCircle(ioArray, width, height, attributes):
     depth = 1.0 - intensity
 
     intensity =  (intensity * attributes[5] * 0.4) + 0.6
-    background = min(cudaGreyDCT(xx, yy, FF, dctDim), 1.0) * 0.4
+    background = min(cudaGreyDCT(xx, yy, FF, dctDim), 1.0) #  * 0.4
 
     # Color
     ioArray[offset, 0] = intensity * (1.0 - depth) + background * depth
@@ -84,7 +84,7 @@ def cudaKernelSquare(ioArray, width, height, attributes):
     depth = 1.0 - intensity
 
     intensity =  (intensity * attributes[5] * 0.4) + 0.6
-    background = min(cudaGreyDCT(xx, yy, FF, dctDim), 1.0) * 0.4
+    background = min(cudaGreyDCT(xx, yy, FF, dctDim), 1.0) # * 0.4
 
     # Color
     ioArray[offset, 0] = intensity * (1.0 - depth) + background * depth
