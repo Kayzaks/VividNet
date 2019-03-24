@@ -92,7 +92,7 @@ def cudaGreyDCT(xx, yy, dctMatrix, dctDimension):
 # -------------------- User Defined
 # Example Render Kernel for CUDA
 @cuda.jit
-def cudaKernelExample(ioArray, width, height, attributes):
+def cudaKernelExample(ioArray, width, height, attributes, primitive):
     offset = cuda.threadIdx.x + cuda.blockIdx.x * cuda.blockDim.x
 
     # Color
@@ -105,7 +105,7 @@ def cudaKernelExample(ioArray, width, height, attributes):
 
 
 # Example Render Kernel for Python
-def pythonKernelExample(xx : float, yy : float, width : float, height : float, attributes : list):
+def pythonKernelExample(xx : float, yy : float, width : float, height : float, attributes : list, primitive : int):
     # Color and Depth
     color = [0.0] * 4
     color[0:3] = applyBackground(xx, yy, [attributes[0], attributes[0], attributes[0]], [0.0, 0.0, 0.0, 0.0], 2, color[3], True)
@@ -126,7 +126,7 @@ class Primitives(Enum):
 class PrimitivesRenderer:
 
     def __init__(self, attributePool : AttributePool):
-        self._kernels = {}
+        self._kernel = None
         self._attributeLayouts = {}
 
         self.definePrimitives(attributePool)
@@ -162,33 +162,24 @@ class PrimitivesRenderer:
 
     def processAttributes(self, attributes : list):
         # Example Attribute pre-processing for renderer
-        return self.processDCTCoefficients(attributes, 0, 0)
+        return attributes
 
 
     # --------------------
 
 
-    def processDCTCoefficients(self, attributes : list, startIndex : int, dctDimension : int):
-        # TODO: Max Intensity according to dimension?
-        for uu in range(dctDimension):
-            for vv in range(dctDimension):
-                intensity = ((128.0 * float(dctDimension) * 2.0) / ((max(uu, vv) + 1))) # TEST * 2.0
-                attributes[startIndex + (uu * dctDimension) + vv] = (attributes[startIndex + (uu * dctDimension) + vv] - 0.5) * intensity 
-        
-        return attributes
 
-
-    def setKernels(self, kernelFunctions : dict):
+    def setKernel(self, kernelFunction):
         # kernelFunctions  # Primitive - Kernel
-        self._kernels = kernelFunctions
+        self._kernel = kernelFunction
 
 
     def setPixelLayerAttributePool(self, attributePool : AttributePool, width : int, height : int):
         for xx in range(width):
             for yy in range(height):
                 attributePool.createType("PixelC-" + str(xx) + "-" + str(yy), AttributeLexical.Pixel)
-                attributePool.createType("PixelX-" + str(xx) + "-" + str(yy), AttributeLexical.Pixel)
-                attributePool.createType("PixelY-" + str(xx) + "-" + str(yy), AttributeLexical.Pixel)
+                attributePool.createType("PixelR-" + str(xx) + "-" + str(yy), AttributeLexical.Pixel)
+                attributePool.createType("PixelA-" + str(xx) + "-" + str(yy), AttributeLexical.Pixel)
                 attributePool.createType("PixelD-" + str(xx) + "-" + str(yy), AttributeLexical.Pixel)
 
         
@@ -203,8 +194,8 @@ class PrimitivesRenderer:
         for xx in range(width):
             for yy in range(height):
                 capsule.createAttribute("PixelC-" + str(xx) + "-" + str(yy), attributePool)
-                capsule.createAttribute("PixelX-" + str(xx) + "-" + str(yy), attributePool)
-                capsule.createAttribute("PixelY-" + str(xx) + "-" + str(yy), attributePool)
+                capsule.createAttribute("PixelR-" + str(xx) + "-" + str(yy), attributePool)
+                capsule.createAttribute("PixelA-" + str(xx) + "-" + str(yy), attributePool)
                 capsule.createAttribute("PixelD-" + str(xx) + "-" + str(yy), attributePool)
                 
         capsule.createAttribute("SlidingFilter-X", attributePool)
@@ -236,8 +227,8 @@ class PrimitivesRenderer:
         for yy in range(height):
             for xx in range(width):
                 mapIdxAttr[index]     = capsule.getAttributeByName("PixelC-" + str(xx) + "-" + str(yy))
-                mapIdxAttr[index + 1] = capsule.getAttributeByName("PixelX-" + str(xx) + "-" + str(yy))
-                mapIdxAttr[index + 2] = capsule.getAttributeByName("PixelY-" + str(xx) + "-" + str(yy))
+                mapIdxAttr[index + 1] = capsule.getAttributeByName("PixelR-" + str(xx) + "-" + str(yy))
+                mapIdxAttr[index + 2] = capsule.getAttributeByName("PixelA-" + str(xx) + "-" + str(yy))
                 mapIdxAttr[index + 3] = capsule.getAttributeByName("PixelD-" + str(xx) + "-" + str(yy))
                 index = index + 4
 
@@ -315,7 +306,7 @@ class PrimitivesRenderer:
 
         for xx in range(width):
             for yy in range(height):
-                color = self._kernels[primitive](float(xx) / fwidth, float(yy) / fheight, fwidth, fheight, attributes)
+                color = self._kernel(float(xx) / fwidth, float(yy) / fheight, fwidth, fheight, attributes, int(primitive))
                 
                 if ( color[3] >= altBackgroundCutoff) and altBackground is not None:
                     pixels[(yy * width + xx) * 4]       = altBackground[(yy * width + xx) * 4]
@@ -344,8 +335,8 @@ class PrimitivesRenderer:
         returnImage         = np.zeros((width * height, 4), dtype=np.float32)
         threadsperblock     = 32 
         blockspergrid       = (width * height + (threadsperblock - 1)) // threadsperblock
- 
-        (self._kernels[primitive])[blockspergrid, threadsperblock](returnImage, width, height, deviceAttributes)
+        
+        (self._kernel)[blockspergrid, threadsperblock](returnImage, width, height, deviceAttributes, int(primitive))
  
         for xx in range(width):
             for yy in range(height):

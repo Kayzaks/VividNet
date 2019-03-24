@@ -27,85 +27,96 @@ def cudaWindowFunction(x, width):
         return 0.0
 
 
-@cuda.jit
-def cudaKernelCircle(ioArray, width, height, attributes):
-    offset = cuda.threadIdx.x + cuda.blockIdx.x * cuda.blockDim.x
-    xx = float32(offset / height) / float32(width)
-    yy = float32(offset % height) / float32(height) 
-
-    FF = cuda.local.array(shape=(28, 28), dtype=float32)
-    
-    dctDim = 8
-    index = 7
-    for uu in range(dctDim):
-        for vv in range(dctDim):
-            FF[uu, vv] = attributes[index]
-            index = index + 1
-
+@cuda.jit('float32(float32, float32, float64[:])', device=True)
+def cudaSDFCircle(xx, yy, attributes):
     intensity1 = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi * 2.0)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi * 2.0)) / attributes[4]
     intensity2 = (xx - (attributes[0])) * math.sin(-attributes[3] * math.pi * 2.0)+(yy - (attributes[1])) * math.cos(-attributes[3] * math.pi * 2.0)
-    intensity =  cudaWindowFunction(math.sqrt(intensity1 * intensity1 + intensity2 * intensity2) - attributes[2] * 0.5, (attributes[6] * 0.1) + 0.025)
-
-    depth = 1.0 - intensity
-
-    intensity =  (intensity * attributes[5] * 0.4) + 0.6
-    background = min(cudaGreyDCT(xx, yy, FF, dctDim), 1.0) #  * 0.4
-
-    # Color
-    ioArray[offset, 0] = intensity * (1.0 - depth) + background * depth
-    ioArray[offset, 1] = xx 
-    ioArray[offset, 2] = yy 
-
-    # Depth
-    ioArray[offset, 3] = depth
-
-
-@cuda.jit
-def cudaKernelSquare(ioArray, width, height, attributes):
-    offset = cuda.threadIdx.x + cuda.blockIdx.x * cuda.blockDim.x
-    xx = float32(offset / height) / float32(width)
-    yy = float32(offset % height) / float32(height) 
-
-    FF = cuda.local.array(shape=(28, 28), dtype=float32)
+    return cudaWindowFunction(math.sqrt(intensity1 * intensity1 + intensity2 * intensity2) - attributes[2] * 0.5, (attributes[6] * 0.1) + 0.025)
     
-    dctDim = 8
-    index = 7
-    for uu in range(dctDim):
-        for vv in range(dctDim):
-            FF[uu, vv] = attributes[index]
-            index = index + 1
-
+@cuda.jit('float32(float32, float32, float64[:])', device=True)
+def cudaSDFSquare(xx, yy, attributes):
     intensity1 = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi * 2.0)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi * 2.0)) / attributes[4]
     intensity2 = (xx - (attributes[0])) * math.sin(-attributes[3] * math.pi * 2.0)+(yy - (attributes[1])) * math.cos(-attributes[3] * math.pi * 2.0)
     intensity1 = abs(intensity1) - attributes[2] * 0.5 
     intensity2 = abs(intensity2) - attributes[2] * 0.5
-    intensity =  cudaWindowFunction( max(intensity1, 0.0) + max(intensity2, 0.0) + min(max(intensity1, intensity2),0.0), (attributes[6] * 0.1) + 0.025)
+    return cudaWindowFunction( max(intensity1, 0.0) + max(intensity2, 0.0) + min(max(intensity1, intensity2),0.0), (attributes[6] * 0.1) + 0.025)
+    
+@cuda.jit('float32(float32, float32, float64[:])', device=True)
+def cudaSDFTriangle(xx, yy, attributes):
+    intensity1 = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi * 2.0 + math.pi)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi * 2.0 + math.pi)) / attributes[4]
+    intensity2 = (xx - (attributes[0])) * math.sin(-attributes[3] * math.pi * 2.0 + math.pi)+(yy - (attributes[1])) * math.cos(-attributes[3] * math.pi * 2.0 + math.pi)
+    k = 1.732050    
+    px = abs(2.0 * intensity1 / attributes[2]) - 1.0
+    py = 2.0 * intensity2 / attributes[2] + 1.0/k
+    if px + k * py > 0.0:
+        ptemp = (-k*px - py) / 2.0
+        px = (px - k*py) / 2.0
+        py = ptemp
+    if px < -2.0:
+        px = -2.0
+    if px > 0.0:
+        px = 0.0
+    px -= px
+    return cudaWindowFunction( -math.sqrt(px * px + py * py) * math.copysign(1.0, py), (attributes[6] * 0.4) + 0.025)
+
+
+@cuda.jit
+def cudaKernel(ioArray, width, height, attributes, primitive):
+    offset = cuda.threadIdx.x + cuda.blockIdx.x * cuda.blockDim.x
+    xx = float32(offset / height) / float32(width)
+    yy = float32(offset % height) / float32(height) 
+
+    intensity = 0.0
+    
+    if primitive == 0:
+        intensity = cudaSDFCircle(xx, yy, attributes)
+    elif primitive == 1:
+        intensity = cudaSDFSquare(xx, yy, attributes)
+    elif primitive == 2:
+        intensity = cudaSDFTriangle(xx, yy, attributes)
 
     depth = 1.0 - intensity
+    intensity = (intensity * attributes[5] * 0.4) + 0.6
 
-    intensity =  (intensity * attributes[5] * 0.4) + 0.6
-    background = min(cudaGreyDCT(xx, yy, FF, dctDim), 1.0) # * 0.4
+    background = 0.0
+
+    if len(attributes) > 8:
+        for i in range(3):
+            newBack = 0.0
+            if attributes[7 + i * 8] > -0.1 and attributes[7 + i * 8] < 0.1:
+                newBack = cudaSDFCircle(xx, yy, attributes[(8 + i * 8):])
+            elif attributes[7 + i * 8] > 0.9 and attributes[7 + i * 8] < 1.1:
+                newBack = cudaSDFSquare(xx, yy, attributes[(8 + i * 8):])
+            elif attributes[7 + i * 8] > 1.9 and attributes[7 + i * 8] < 2.1:
+                newBack = cudaSDFTriangle(xx, yy, attributes[(8 + i * 8):])
+            
+            newBack = ((newBack * attributes[8 + 5 + i * 8] * 0.4) + 0.6) * newBack
+            background = max(background, newBack)
+            
 
     # Color
     ioArray[offset, 0] = intensity * (1.0 - depth) + background * depth
-    ioArray[offset, 1] = xx 
-    ioArray[offset, 2] = yy 
+    ioArray[offset, 1] = math.sqrt((xx - 0.5) * (xx - 0.5) + (yy - 0.5) * (yy - 0.5))
+    angle = math.atan2((xx - 0.5), (yy - 0.5)) # atan2 Reversed to use y-axis as reference 
+    if angle < 0.0:
+        angle = 2 * math.pi + angle
+    ioArray[offset, 2] = angle
 
     # Depth
     ioArray[offset, 3] = depth
 
-
-
-DCTDIMENSION = 8
-DCTOFFSET = 7
 
 
 class TestPrimitives(Primitives):
     Circle = 0
     Square = 1
+    Triangle = 2
+
+    NoPrimitive = -1
 
         
 class TestRenderer(PrimitivesRenderer):
+
     def definePrimitives(self, attributePool : AttributePool):
         primAttributes : dict = {}     # Index - (Name, Lexical)
 
@@ -118,24 +129,17 @@ class TestRenderer(PrimitivesRenderer):
         
         primAttributes[5] = ("Intensity", AttributeLexical.Adjective)
         primAttributes[6] = ("Strength", AttributeLexical.Adjective)
-
-        dctDim = DCTDIMENSION        
-        index = DCTOFFSET
-        for uu in range(dctDim):
-            for vv in range(dctDim):
-                primAttributes[index] = ("BackgroundDCT-" + str(uu) + "-" + str(vv), AttributeLexical.NonTransmit)
-                index = index + 1
                 
         self.setPrimitiveAttributes(TestPrimitives.Circle, attributePool, primAttributes)
 
         # Square   
         self.setPrimitiveAttributes(TestPrimitives.Square, attributePool, primAttributes)
 
+        # Triangle   
+        self.setPrimitiveAttributes(TestPrimitives.Triangle, attributePool, primAttributes)
 
-        self.setKernels({
-                        TestPrimitives.Square : cudaKernelSquare,
-                        TestPrimitives.Circle : cudaKernelCircle,
-                        })
+
+        self.setKernel(cudaKernel)
 
 
     def renderInputGenerator(self, primitive : Primitives, width : int, height : int):
@@ -154,16 +158,47 @@ class TestRenderer(PrimitivesRenderer):
         # No "invisible" Primitive
         outList[6] = max(0.1, outList[6])
 
-        # Limit Rotations to 0 - Pi (Rotationally symmetric)
-        outList[3] = outList[3] * 0.5
+        if primitive == TestPrimitives.Circle:
+            # Limit Rotations to 0 - Pi (Rotationally symmetric)
+            outList[3] = outList[3] * 0.5
+        if primitive == TestPrimitives.Square:
+            # Limit Rotations to 0 - Pi (Rotationally symmetric)
+            outList[3] = outList[3] * 0.25
+        if primitive == TestPrimitives.Triangle:
+            # Limit Rotations to 0 - Pi (Rotationally symmetric)
+            outList[3] = outList[3] * 0.3333
+            outList[4] = max(0.5, outList[4])
 
         return outList
 
-
+    
     def processAttributes(self, attributes : list):
-        return self.processDCTCoefficients(attributes, DCTOFFSET, DCTDIMENSION)
+        # Add some random Background Primitives (3 in total)
+        prims = [x - 1 for x in np.random.randint(4, size=3)] 
+        extras = []
+        for primitive in prims:
+            currList = np.random.rand(7)
 
-        
-    def getModelSplit(self, primitive : Primitives):
-        # Example Model Split
-        return [0, DCTOFFSET, len(self._attributeLayouts[primitive])]
+            currList[0] = (currList[0] - 0.1) * 1.2
+            currList[1] = (currList[1] - 0.1) * 1.2
+
+            # Minimum Size
+            currList[2] = max(0.2, currList[2])
+            currList[4] = max(0.5, currList[4])
+            # No "invisible" Primitive
+            currList[6] = max(0.1, currList[6])
+
+            if primitive == int(TestPrimitives.Circle):
+                # Limit Rotations to 0 - Pi (Rotationally symmetric)
+                currList[3] = currList[3] * 0.5
+            if primitive == int(TestPrimitives.Square):
+                # Limit Rotations to 0 - Pi (Rotationally symmetric)
+                currList[3] = currList[3] * 0.25
+            if primitive == int(TestPrimitives.Triangle):
+                # Limit Rotations to 0 - Pi (Rotationally symmetric)
+                currList[3] = currList[3] * 0.3333
+                currList[4] = max(0.5, currList[4])
+            
+            extras.append(float(primitive))
+            extras.extend(currList)
+        return np.concatenate((attributes, extras), axis=None)

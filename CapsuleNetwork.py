@@ -4,6 +4,7 @@ from PrimitivesRenderer import Primitives
 from Observation import Observation
 
 import copy
+import math
 import numpy as np
 import matplotlib.patches as patches
 
@@ -107,6 +108,14 @@ class CapsuleNetwork:
 
         for filterShape, capsule in self._pixelCapsules.items():
             if filterShape[0] <= width and filterShape[1] <= height:
+
+                fsWidth = float(filterShape[0])
+                fsHeight = float(filterShape[1])
+                fsMaxW = float(max(width, height))
+
+                rads = np.fromfunction(lambda xx, yy : np.sqrt((xx / fsWidth - 0.5) ** 2 + (yy / fsHeight - 0.5) ** 2), (filterShape[0], filterShape[1]), dtype=float)
+                angs = np.fromfunction(lambda xx, yy : np.arctan2((xx / fsWidth - 0.5), (yy / fsHeight - 0.5)) % (math.pi * 2), (filterShape[0], filterShape[1]), dtype=float)
+
                 for offsetX in range(0, width - filterShape[0] + 1, stepSize):
                     for offsetY in range(0, height - filterShape[1] + 1, stepSize):
                         attributes = {}
@@ -114,13 +123,13 @@ class CapsuleNetwork:
                             for yy in range(filterShape[1]):
                                 # TODO: Use mapping from Renderer
                                 attributes[capsule.getAttributeByName("PixelC-" + str(xx) + "-" + str(yy))] = image[((yy + offsetY) * width + xx + offsetX) * 4]
-                                attributes[capsule.getAttributeByName("PixelX-" + str(xx) + "-" + str(yy))] = float(xx) / float(filterShape[0])
-                                attributes[capsule.getAttributeByName("PixelY-" + str(xx) + "-" + str(yy))] = float(yy) / float(filterShape[1])
+                                attributes[capsule.getAttributeByName("PixelR-" + str(xx) + "-" + str(yy))] = rads[xx, yy]
+                                attributes[capsule.getAttributeByName("PixelA-" + str(xx) + "-" + str(yy))] = angs[xx, yy]
                                 attributes[capsule.getAttributeByName("PixelD-" + str(xx) + "-" + str(yy))] = 1.0
 
-                        attributes[capsule.getAttributeByName(offsetLabelX)] = float(offsetX) / float(max(width, height))
-                        attributes[capsule.getAttributeByName(offsetLabelY)] = float(offsetY) / float(max(width, height))
-                        attributes[capsule.getAttributeByName(offsetLabelRatio)] = float(filterShape[0]) / float(max(width, height))
+                        attributes[capsule.getAttributeByName(offsetLabelX)] = float(offsetX) / fsMaxW
+                        attributes[capsule.getAttributeByName(offsetLabelY)] = float(offsetY) / fsMaxW
+                        attributes[capsule.getAttributeByName(offsetLabelRatio)] = fsWidth / fsMaxW
 
                         pixelObs = Observation(capsule, None, [], attributes, 1.0)
                         capsule.addPixelObservation(pixelObs)

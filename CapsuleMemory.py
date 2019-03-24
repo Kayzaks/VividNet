@@ -72,6 +72,9 @@ class CapsuleMemory:
                 if sortedObs[index2] in self._observations:
                     if CapsuleMemory.checkSimilarObservations(obs.getOutputs(), sortedObs[index2].getOutputs()) > HyperParameters.SimilarObservationsCutOff:
                         self.removeObservation(sortedObs[index2])
+                    # TEST:
+                    if sortedObs[index2].getOutput(attributeName = "Size") * sortedObs[index2].getOutput(attributeName = "Aspect-Ratio") < 0.08:
+                        self.removeObservation(sortedObs[index2])
 
 
     def removeObservation(self, observation : Observation):

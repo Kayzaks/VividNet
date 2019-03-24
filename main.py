@@ -21,53 +21,87 @@ if __name__ == '__main__':
     capsNet = CapsuleNetwork()
     capsNet.setRenderer(TestRenderer)
 
-    renderer = TestRenderer(capsNet.getAttributePool())
-
     width = 28
     height = 28
     
     squareCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Square, [(width, height)])
     circleCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Circle, [(width, height)])   
-    playerCapsule = capsNet.addSemanticCapsule("Player", [Observation(squareCapsule, squareCapsule._routes[0], [], {}, 1.0 ),
-                                                          Observation(circleCapsule, circleCapsule._routes[0], [], {}, 1.0 )])  
+    triangleCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Triangle, [(width, height)])   
+    #playerCapsule = capsNet.addSemanticCapsule("Player", [Observation(squareCapsule, squareCapsule._routes[0], [], {}, 1.0 ),
+    #                                                      Observation(circleCapsule, circleCapsule._routes[0], [], {}, 1.0 )])  
 
 #        
-#    for i in range(1):
-#        squareCapsule.continueTraining(True, [0])
-#        circleCapsule.continueTraining(True, [0])
+    for i in range(2):
+        print("---------------- ROUND " + str(i) + "---------------")
+        squareCapsule.continueTraining(True, [0])
+        circleCapsule.continueTraining(True, [0])
+        triangleCapsule.continueTraining(True, [0])
 
 
     for i in range(3):
         rotation = 0.025 + 0.05 * float(i) #0.025 + 0.05 * float(i)
 
-        allObs = {circleCapsule : [], squareCapsule : []}
+        allObs = {circleCapsule : [], squareCapsule : [], triangleCapsule : []}
+        
         obsDicts = []
         
-        shape = (56, 56)
+        shape = (56 , 56)
+        spsize = 0.9
+        #shape = (56 + 28, 56 + 28)
+        #spsize = 0.75
 
-        obsDicts.append({ circleCapsule.getAttributeByName("Position-X") : 0.5 - 0.15 * math.sin(rotation * math.pi * 2.0),
-                    circleCapsule.getAttributeByName("Position-Y") : 0.5 + 0.15 * math.cos(rotation * math.pi * 2.0),
-                    circleCapsule.getAttributeByName("Size") : 0.25,
-                    circleCapsule.getAttributeByName("Rotation") : rotation + 0.25,
-                    circleCapsule.getAttributeByName("Aspect-Ratio") : 0.7,
-                    circleCapsule.getAttributeByName("Intensity") : 0.1,
-                    circleCapsule.getAttributeByName("Strength") : 0.7 })
+        obsDicts.append({ circleCapsule.getAttributeByName("Position-X") : 0.5 + 0.03 * spsize * math.sin(rotation * math.pi * 2.0),
+                    circleCapsule.getAttributeByName("Position-Y") :       0.5 - 0.03 * spsize * math.cos(rotation * math.pi * 2.0),
+                    circleCapsule.getAttributeByName("Size") : 0.20 * spsize,
+                    circleCapsule.getAttributeByName("Rotation") : rotation,
+                    circleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
+                    circleCapsule.getAttributeByName("Intensity") : 0.8,
+                    circleCapsule.getAttributeByName("Strength") : 0.1 * spsize })
         
         for obs in obsDicts:
             allObs[circleCapsule].append(Observation(circleCapsule, circleCapsule._routes[0], [], obs, 1.0 ))
 
         obsDicts = []
 
-        obsDicts.append({ squareCapsule.getAttributeByName("Position-X") : 0.5 + 0.15 * math.sin(rotation * math.pi * 2.0),
-                    squareCapsule.getAttributeByName("Position-Y") : 0.5 - 0.15 * math.cos(rotation * math.pi * 2.0),
-                    squareCapsule.getAttributeByName("Size") : 0.25,
+        obsDicts.append({ squareCapsule.getAttributeByName("Position-X") : 0.5 - 0.25 * spsize * math.sin(rotation * math.pi * 2.0),
+                    squareCapsule.getAttributeByName("Position-Y") :       0.5 + 0.25 * spsize * math.cos(rotation * math.pi * 2.0),
+                    squareCapsule.getAttributeByName("Size") : 0.25 * spsize,
                     squareCapsule.getAttributeByName("Rotation") : rotation,
-                    squareCapsule.getAttributeByName("Aspect-Ratio") : 0.7,
+                    squareCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
                     squareCapsule.getAttributeByName("Intensity") : 0.6,
-                    squareCapsule.getAttributeByName("Strength") : 0.7 })
+                    squareCapsule.getAttributeByName("Strength") : 0.1 * spsize })
                     
         for obs in obsDicts:
             allObs[squareCapsule].append(Observation(squareCapsule, squareCapsule._routes[0], [], obs, 1.0 ))
+
+        obsDicts = []
+
+        obsDicts.append({ triangleCapsule.getAttributeByName("Position-X") : 0.5 + 0.0 * spsize * math.cos(rotation * math.pi * 2.0) + 0.25 * spsize * math.sin(rotation * math.pi * 2.0),
+                    triangleCapsule.getAttributeByName("Position-Y") :       0.5 + 0.0 * spsize * math.sin(rotation * math.pi * 2.0) - 0.25 * spsize * math.cos(rotation * math.pi * 2.0),
+                    triangleCapsule.getAttributeByName("Size") : 0.15 * spsize,
+                    triangleCapsule.getAttributeByName("Rotation") : rotation,
+                    triangleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
+                    triangleCapsule.getAttributeByName("Intensity") : 0.1,
+                    triangleCapsule.getAttributeByName("Strength") : 0.4 * spsize })
+
+        obsDicts.append({ triangleCapsule.getAttributeByName("Position-X") : 0.5 - 0.25 * spsize * math.cos(rotation * math.pi * 2.0) - 0.25 * spsize * math.sin(rotation * math.pi * 2.0),
+                    triangleCapsule.getAttributeByName("Position-Y") :       0.5 - 0.25 * spsize * math.sin(rotation * math.pi * 2.0) + 0.25 * spsize * math.cos(rotation * math.pi * 2.0),
+                    triangleCapsule.getAttributeByName("Size") : 0.25 * 0.6 * spsize,
+                    triangleCapsule.getAttributeByName("Rotation") : rotation + 1.0 / 12.0,
+                    triangleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
+                    triangleCapsule.getAttributeByName("Intensity") : 0.1,
+                    triangleCapsule.getAttributeByName("Strength") : 0.4 * spsize })
+
+        obsDicts.append({ triangleCapsule.getAttributeByName("Position-X") : 0.5 + 0.25 * spsize * math.cos(rotation * math.pi * 2.0) - 0.25 * spsize * math.sin(rotation * math.pi * 2.0),
+                    triangleCapsule.getAttributeByName("Position-Y") :       0.5 + 0.25 * spsize * math.sin(rotation * math.pi * 2.0) + 0.25 * spsize * math.cos(rotation * math.pi * 2.0),
+                    triangleCapsule.getAttributeByName("Size") : 0.25 * 0.6 * spsize,
+                    triangleCapsule.getAttributeByName("Rotation") : rotation + 1.0 / 12.0 + 1.0 / 6.0,
+                    triangleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
+                    triangleCapsule.getAttributeByName("Intensity") : 0.1,
+                    triangleCapsule.getAttributeByName("Strength") : 0.4 * spsize })
+                    
+        for obs in obsDicts:
+            allObs[triangleCapsule].append(Observation(triangleCapsule, triangleCapsule._routes[0], [], obs, 1.0 ))
 
 
         #playerCapsule = capsNet.addSemanticCapsule("Player", [allObs[squareCapsule][0], allObs[circleCapsule][0]])  

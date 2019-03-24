@@ -39,9 +39,14 @@ class Observation:
         return inputs
 
 
-    def getOutput(self, attribute : Attribute):
-        if attribute in self._outputAttributes:
+    def getOutput(self, attribute : Attribute = None, attributeName : str = None):
+        if attribute is not None and attribute in self._outputAttributes:
             return self._outputAttributes[attribute]
+        if attributeName is not None:
+            for attr, value in self._outputAttributes.items():
+                if attr.getName() == attributeName:
+                    return value
+        return 0.0
 
     
     def printOutputs(self, includeNonInheritable : bool):

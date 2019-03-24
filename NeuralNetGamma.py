@@ -17,36 +17,25 @@ class NeuralNetGamma(NeuralNet):
     def defineModel(self, inputShape : tuple, outputSize : int):
         model = Sequential()
 
-        model.add(Conv2D(16, (3, 3), activation='relu', input_shape=inputShape))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(16, (3, 3), activation='relu'))
+        model.add(Conv2D(32, (3, 3), activation='relu', padding = 'same', input_shape=inputShape))
+        model.add(Conv2D(32, (3, 3), activation='relu', padding = 'same'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        
+        model.add(Conv2D(64, (3, 3), activation='relu', padding = 'same'))
+        model.add(Conv2D(64, (3, 3), activation='relu', padding = 'same'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        
+        model.add(Conv2D(128, (3, 3), activation='relu', padding = 'same'))
+        model.add(Conv2D(128, (3, 3), activation='relu', padding = 'same'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Flatten())
 
-        model.add(Dense(256, activation='relu'))
-        model.add(Dropout(0.25))
+        model.add(Dense(1028, activation='relu'))
+        model.add(Dense(1028, activation='relu'))
+        
         model.add(Dense(128, activation='relu'))
 
-        model.add(Dense(outputSize, activation='linear'))
-        
-#        model.add(Conv2D(64, (3, 3), activation='relu', input_shape=inputShape))
-#        #model.add(BatchNormalization())
-#        model.add(MaxPooling2D(pool_size=(2, 2)))
-#        model.add(Dropout(0.25))
-#
-#        model.add(Conv2D(64, (3, 3), activation='relu'))
-#        #model.add(BatchNormalization())
-#        model.add(MaxPooling2D(pool_size=(2, 2)))
-#        model.add(Dropout(0.25))
-#
-#        model.add(Flatten())
-#
-#        model.add(Dense(512, activation='relu'))
-#        model.add(Dropout(0.25))
-#
-#        model.add(Dense(256, activation='relu'))
-#        model.add(Dropout(0.25))
-#
-#        model.add(Dense(outputSize, activation='linear'))
+        model.add(Dense(outputSize, activation='linear'))       
+
 
         return model
