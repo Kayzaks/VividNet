@@ -204,14 +204,17 @@ class PrimitivesRenderer:
     
     
     def agreementFunction(self, capsule, attributes1 : dict, attributes2 : dict, width : int, height : int):
+        # attributes1  # Attribute - List of Values
+        # attributes2  # Attribute - List of Values
+        # Eventhough these are List of Values, they only contain 1 Value anyway
         outputs = {}
         for xx in range(width):
             for yy in range(height):
-                depth = attributes2[capsule.getAttributeByName("PixelD-" + str(xx) + "-" + str(yy))]
+                depth = attributes2[capsule.getAttributeByName("PixelD-" + str(xx) + "-" + str(yy))][0]
                 # We only check those pixels that contain the actual primitive and not just background
                 if depth < 1.0:
                     intensityAttr = capsule.getAttributeByName("PixelC-" + str(xx) + "-" + str(yy))
-                    outputs[intensityAttr] = Utility.windowFunction(attributes1[intensityAttr] - attributes2[intensityAttr], HyperParameters.PrimAgreementWidth, HyperParameters.PrimAgreementFallOff)
+                    outputs[intensityAttr] = Utility.windowFunction(attributes1[intensityAttr][0] - attributes2[intensityAttr][0], HyperParameters.PrimAgreementWidth, HyperParameters.PrimAgreementFallOff)
         return outputs
 
 
@@ -221,7 +224,7 @@ class PrimitivesRenderer:
 
     def getLambdaGOutputMap(self, capsule, width : int, height : int):
         mapIdxAttr : dict = {}  # Index - Attribute
-        mapAttrIdx : dict = {}  # Attribute - Index
+        mapAttrIdx : dict = {}  # Attribute - List of Indices
 
         index = 0
         for yy in range(height):
@@ -233,7 +236,21 @@ class PrimitivesRenderer:
                 index = index + 4
 
         for key, value in mapIdxAttr.items():
-            mapAttrIdx[value] = key
+            mapAttrIdx[value] = [key]
+
+        return (mapIdxAttr, mapAttrIdx)
+
+
+    def getLambdaGInputMap(self, primitive : Primitives, capsule):
+        mapIdxAttr : dict = {}  # Index - Attribute
+        mapAttrIdx : dict = {}  # Attribute - List of Indices
+
+        for key, value in self._attributeLayouts[primitive].items():
+            mapIdxAttr[key] = capsule.getAttributeByName(value[0])
+
+        # Invert the mapping
+        for key, value in mapIdxAttr.items():
+            mapAttrIdx[value] = [key]
 
         return (mapIdxAttr, mapAttrIdx)
 
@@ -271,19 +288,6 @@ class PrimitivesRenderer:
         for key, value in self._attributeLayouts[primitive].items():
             capsule.createAttribute(value[0], attributePool)
 
-
-    def getLambdaGInputMap(self, primitive : Primitives, capsule):
-        mapIdxAttr : dict = {}  # Index - Attribute
-        mapAttrIdx : dict = {}  # Attribute - Index
-
-        for key, value in self._attributeLayouts[primitive].items():
-            mapIdxAttr[key] = capsule.getAttributeByName(value[0])
-
-        # Invert the mapping
-        for key, value in mapIdxAttr.items():
-            mapAttrIdx[value] = key
-
-        return (mapIdxAttr, mapAttrIdx)
 
 
     def renderPrimitive(self, primitive : Primitives, attributes : list, width : int, height : int, isTraining : bool = False, altBackground = None, showDebug : bool = False):

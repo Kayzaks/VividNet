@@ -20,9 +20,9 @@ class CapsuleRoute:
         self._gammaFunctionLambda                    = None
         self._agreementFunctionLambda                = None
 
-        self._gInputMapping         : dict           = None  # Attribute - Index 
+        self._gInputMapping         : dict           = None  # Attribute - List of Indices (Always 1 Element)
         self._gOutputMapping        : dict           = None  # Index - Attribute
-        self._gammaInputMapping     : dict           = None  # Attribute - Index
+        self._gammaInputMapping     : dict           = None  # Attribute - List of Indices
         self._gammaOutputMapping    : dict           = None  # Index - Attribute
         self._neuralNetGamma        : NeuralNetGamma = None
         self._neuralNetG            : NeuralNetG     = None
@@ -58,9 +58,14 @@ class CapsuleRoute:
     def createSemanticRoute(self, initialObservations : list):
         self._isSemanticCapsule = True
 
-        inputs = {}
+        inputs = {}                             # Attribute - List of Values
         for obs in initialObservations:
-            inputs.update(obs.getOutputs(True))
+            newInputs = obs.getOutputs(True)    # Attribute - Value
+            for newAttr, newValue in newInputs.items():
+                if newAttr in inputs:
+                    inputs[newAttr].append(newValue)
+                else:
+                    inputs[newAttr] = [newValue]
 
         outputs = self.runGammaFunction(inputs)
         newObservation = Observation(self._parentCapsule, self, initialObservations, outputs, 1.0)
@@ -126,17 +131,20 @@ class CapsuleRoute:
 
     def resizeInternals(self):
         # TODO: Check if anything actually changed
-        self._gInputMapping         : dict          = dict()  # Attribute - Index 
+        self._gInputMapping         : dict          = dict()  # Attribute - List of Indices (with 1 Element)
         self._gOutputMapping        : dict          = dict()  # Index - Attribute
-        self._gammaInputMapping     : dict          = dict()  # Attribute - Index
+        self._gammaInputMapping     : dict          = dict()  # Attribute - List of Indices
         self._gammaOutputMapping    : dict          = dict()  # Index - Attribute
 
         for idx, attribute in enumerate(self.getInputAttributes()):
-            self._gammaInputMapping[attribute] = idx
+            if attribute in self._gammaInputMapping:
+                self._gammaInputMapping[attribute].append(idx)
+            else:
+                self._gammaInputMapping[attribute] = [idx]
             self._gOutputMapping[idx] = attribute
             
         for idx, attribute in enumerate(self.getOutputAttributes()):
-            self._gInputMapping[attribute] = idx
+            self._gInputMapping[attribute] = [idx]
             self._gammaOutputMapping[idx] = attribute
 
         self._neuralNetG            : NeuralNetG     = NeuralNetG(self._gInputMapping, self._gammaInputMapping, self._name + "-g", True)
@@ -159,36 +167,36 @@ class CapsuleRoute:
 
 
     def runGammaFunction(self, attributes : dict = None):
-        # attributes        # Attribute - Value
+        # attributes        # Attribute - List of Values
         if self._isSemanticCapsule is False:
-            return self._neuralNetGamma.forwardPass(attributes)
+            return self._neuralNetGamma.forwardPass(attributes) # Attribute - List of Values
         else:
             # TODO: ACTUAL Semantic Calculation
             outputs = {}
             for attribute in self.getOutputAttributes():
                 count = 0
                 aggregate = 0.0
-                for inAttr, inValue in attributes.items():
+                for inAttr, inValueList in attributes.items():
                     if inAttr.getName() == attribute.getName():
-                        count = count + 1
-                        aggregate = aggregate + inValue
+                        count = count + len(inValueList)
+                        aggregate = aggregate + sum(inValueList)
 
-                outputs[attribute] = aggregate / max(count, 1)
-            return outputs  # Attribute - Value
+                outputs[attribute] = [aggregate / max(count, 1)]
+            return outputs  # Attribute - List of Values
 
 
     def runGFunction(self, attributes : dict = None, isTraining : bool = True):
-        # attributes        # Attribute - Value
+        # attributes        # Attribute - List of Values
         if self._isSemanticCapsule is False:
-            values = self._memory.runXInferer(Utility.mapDataOneWayDictRev(attributes, self._gInputMapping), isTraining)
-            return Utility.mapDataOneWay(values, self._gOutputMapping)  # Attribute - Value
+            values = self._memory.runXInferer(Utility.mapDataOneWayDictRevList(attributes, self._gInputMapping), isTraining)
+            return Utility.mapDataOneWayList(values, self._gOutputMapping)   # Attribute - List of Values
         else:
-            return self._neuralNetG.forwardPass(attributes)             # Attribute - Value
+            return self._neuralNetG.forwardPass(attributes)                  # Attribute - List of Values
 
 
     def agreementFunction(self, attributes1 : dict, attributes2 : dict):
-        # attributes1       # Attribute - Value
-        # attributes2       # Attribute - Value
+        # attributes1       # Attribute - List of Values
+        # attributes2       # Attribute - List of Values
         outputs = {}
         if self._isSemanticCapsule is False:
             outputs = self._agreementFunctionLambda(attributes1, attributes2)
@@ -200,11 +208,13 @@ class CapsuleRoute:
 
     @staticmethod
     def semanticAgreementFunction(attributes1 : dict, attributes2 : dict):
-        # attributes1       # Attribute - Value
-        # attributes2       # Attribute - Value
+        # attributes1       # Attribute - List of Values
+        # attributes2       # Attribute - List of Values
         outputs = {}
-        for attribute, value in attributes1.items():
-            outputs[attribute] = Utility.windowFunction(value - attributes2[attribute], 0.1, 0.1)
+        for attribute, valueList in attributes1.items():
+            # TODO: Try out all permutations?
+            # TODO: This is wrong, the sum is a bad measure
+            outputs[attribute] = Utility.windowFunction(sum(valueList) - sum(attributes2[attribute]), 0.1, 0.1)
             
         return outputs # Attribute - Value
         

@@ -15,10 +15,10 @@ from PrimitivesRenderer import applyFilters
 from AttributeType import AttributeLexical
 from AttributePool import AttributePool
 
-@cuda.jit('float32(float32, float32)', device=True)
-def cudaWindowFunction(x, width):
+@cuda.jit('float32(float32, float32, float32)', device=True)
+def cudaWindowFunction(x, width, falloff):
     fullSupport = width
-    linearSupport = width + 0.025
+    linearSupport = width + falloff 
     if abs(x) < fullSupport:
         return 1.0
     elif abs(x) < linearSupport:
@@ -29,25 +29,25 @@ def cudaWindowFunction(x, width):
 
 @cuda.jit('float32(float32, float32, float64[:])', device=True)
 def cudaSDFCircle(xx, yy, attributes):
-    intensity1 = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi * 2.0)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi * 2.0)) / attributes[4]
-    intensity2 = (xx - (attributes[0])) * math.sin(-attributes[3] * math.pi * 2.0)+(yy - (attributes[1])) * math.cos(-attributes[3] * math.pi * 2.0)
-    return cudaWindowFunction(math.sqrt(intensity1 * intensity1 + intensity2 * intensity2) - attributes[2] * 0.5, (attributes[6] * 0.1) + 0.025)
+    tx = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi * 2.0)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi * 2.0)) / attributes[4]
+    ty = (xx - (attributes[0])) * math.sin(-attributes[3] * math.pi * 2.0)+(yy - (attributes[1])) * math.cos(-attributes[3] * math.pi * 2.0)
+    return cudaWindowFunction(math.sqrt(tx * tx + ty * ty) - attributes[2] * 0.5, (attributes[6] * 0.1) + 0.025, 0.025)
     
 @cuda.jit('float32(float32, float32, float64[:])', device=True)
 def cudaSDFSquare(xx, yy, attributes):
-    intensity1 = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi * 2.0)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi * 2.0)) / attributes[4]
-    intensity2 = (xx - (attributes[0])) * math.sin(-attributes[3] * math.pi * 2.0)+(yy - (attributes[1])) * math.cos(-attributes[3] * math.pi * 2.0)
-    intensity1 = abs(intensity1) - attributes[2] * 0.5 
-    intensity2 = abs(intensity2) - attributes[2] * 0.5
-    return cudaWindowFunction( max(intensity1, 0.0) + max(intensity2, 0.0) + min(max(intensity1, intensity2),0.0), (attributes[6] * 0.1) + 0.025)
+    tx = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi * 2.0)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi * 2.0)) / attributes[4]
+    ty = (xx - (attributes[0])) * math.sin(-attributes[3] * math.pi * 2.0)+(yy - (attributes[1])) * math.cos(-attributes[3] * math.pi * 2.0)
+    tx = abs(tx) - attributes[2] * 0.5 
+    ty = abs(ty) - attributes[2] * 0.5
+    return cudaWindowFunction( max(tx, 0.0) + max(ty, 0.0) + min(max(tx, ty),0.0), (attributes[6] * 0.1) + 0.025, 0.025)
     
 @cuda.jit('float32(float32, float32, float64[:])', device=True)
 def cudaSDFTriangle(xx, yy, attributes):
-    intensity1 = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi * 2.0 + math.pi)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi * 2.0 + math.pi)) / attributes[4]
-    intensity2 = (xx - (attributes[0])) * math.sin(-attributes[3] * math.pi * 2.0 + math.pi)+(yy - (attributes[1])) * math.cos(-attributes[3] * math.pi * 2.0 + math.pi)
+    tx = ((xx - (attributes[0])) * math.cos(-attributes[3] * math.pi * 2.0 + math.pi)-(yy - (attributes[1])) * math.sin(-attributes[3] * math.pi * 2.0 + math.pi)) / attributes[4]
+    ty = (xx - (attributes[0])) * math.sin(-attributes[3] * math.pi * 2.0 + math.pi)+(yy - (attributes[1])) * math.cos(-attributes[3] * math.pi * 2.0 + math.pi)
     k = 1.732050    
-    px = abs(2.0 * intensity1 / attributes[2]) - 1.0
-    py = 2.0 * intensity2 / attributes[2] + 1.0/k
+    px = abs(2.0 * tx / attributes[2]) - 1.0
+    py = 2.0 * ty / attributes[2] + 1.0/k
     if px + k * py > 0.0:
         ptemp = (-k*px - py) / 2.0
         px = (px - k*py) / 2.0
@@ -57,7 +57,7 @@ def cudaSDFTriangle(xx, yy, attributes):
     if px > 0.0:
         px = 0.0
     px -= px
-    return cudaWindowFunction( -math.sqrt(px * px + py * py) * math.copysign(1.0, py), (attributes[6] * 0.4) + 0.025)
+    return cudaWindowFunction( (-math.sqrt(px * px + py * py) * math.copysign(1.0, py)) * attributes[2], (attributes[6] * 0.1), 0.025)
 
 
 @cuda.jit

@@ -8,10 +8,15 @@ class Utility:
     @staticmethod
     def mapData(values : list, originalMap : dict, newMap : dict):
         # originalMap   # Index  - Object
-        # newMap        # Object - Index
-        outputs = [0.0] * len(newMap)
+        # newMap        # Object - List of Indices
+        lenMap = 0
+        for idxList in newMap.values():
+            lenMap = lenMap + len(idxList)
+
+        outputs = [0.0] * lenMap
         for idx, val in enumerate(values):
-            outputs[newMap[originalMap[idx]]] = val 
+            for newIdx in newMap[originalMap[idx]]:
+                outputs[newIdx] = val 
 
         return outputs # Values
 
@@ -25,6 +30,18 @@ class Utility:
 
         return outputs  # Object - Value
 
+            
+    @staticmethod
+    def mapDataOneWayList(values : list, newMap : dict):
+        # newMap        # Index - Object
+        outputs : dict = dict()
+        for idx, val in enumerate(values):
+            if newMap[idx] in outputs:
+                outputs[newMap[idx]].append(val)
+            else:
+                outputs[newMap[idx]] = [val]
+
+        return outputs  # Object - List of Values
 
             
     @staticmethod
@@ -35,6 +52,22 @@ class Utility:
             outputs[obj] = values[idx]
 
         return outputs  # Object - Value
+
+            
+
+    @staticmethod
+    def mapDataOneWayRevList(values : list, newMap : dict):
+        # newMap        # Object - List of Indices
+        outputs : dict = dict()
+        for obj, idxList in newMap.items():
+            for idx in idxList:
+                if obj in outputs:
+                    outputs[obj].append(values[idx])
+                else:
+                    outputs[obj] = [values[idx]]
+
+        return outputs  # Object - List of Values
+
         
 
     @staticmethod
@@ -58,8 +91,25 @@ class Utility:
             if obj in values:
                 outputs[idx] = values[obj]
 
-        return outputs  # Values
+        return outputs  # List of Values
+        
 
+    @staticmethod
+    def mapDataOneWayDictRevList(values : dict, newMap : dict):
+        # values        # Object - List of Values
+        # newMap        # Object - List of Indices
+        lenMap = 0
+        for idxList in newMap.values():
+            lenMap = lenMap + len(idxList)
+
+        outputs = [0.0] * lenMap
+        for obj, idxList in newMap.items():
+            for idxidx, idx in enumerate(idxList):
+                if obj in values:
+                    outputs[idx] = values[obj][idxidx]
+
+        return outputs  # List of Values
+        
 
     @staticmethod
     def isqrt(n : int):

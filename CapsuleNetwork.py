@@ -181,13 +181,16 @@ class CapsuleNetwork:
                     xOffset1 = int(xOffset1 * float(max(width, height)))
                     yOffset1 = int(yOffset1 * float(max(width, height)))
 
+                    print(capsule.getName())
+                    print(len(observation.getInputObservations()))
+
                     for inObs in observation.getInputObservations():
                         xOffset2 = inObs.getOutput(inObs.getCapsule().getAttributeByName(targetLabelX))
                         yOffset2 = inObs.getOutput(inObs.getCapsule().getAttributeByName(targetLabelY))
                         
                         xOffset2 = int(xOffset2 * float(max(width, height)))
                         yOffset2 = int(yOffset2 * float(max(width, height)))
-
+                        
                         semantics.append(patches.Arrow(xOffset1, yOffset1, xOffset2 - xOffset1, yOffset2 - yOffset1, linewidth = 1, edgecolor = 'r', facecolor = 'none' ))
                         
                     semantics.append(patches.Circle((xOffset1, yOffset1), radius = 1, color = 'r'))    

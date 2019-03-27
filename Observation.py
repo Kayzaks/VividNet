@@ -3,17 +3,28 @@ from Attribute import Attribute
 class Observation:
 
     def __init__(self, capsule, route, inputObservations : list, outputAttributes : dict, outputProbability : float):
-        # inputObservations                                                 # Observations
-        # outputAttributes                                                  # Attribute - Value
+        # inputObservations                                                 # List of Observations      or   List of Lists of Observations
+        # outputAttributes                                                  # Attribute - Value         or   Attribute - List of Values
         # inputProbabilities                                                # Capsule - Probability
-        self._inputObservations     : list          = inputObservations     # Observations
+        self._inputObservations     : list          = []                    # Observations
         self._outputAttributes      : dict          = {}                    # Attribute - Value
         self._outputProbability     : float         = outputProbability
         self._route                                 = route
         self._capsule                               = capsule
 
+        for obs in inputObservations:
+            if type(obs) is list:
+                for actualObs in obs:
+                    self._inputObservations.append(actualObs)
+            else:
+                self._inputObservations.append(obs)
+
+
         for attribute, value in outputAttributes.items():
-            self._outputAttributes[attribute] = value
+            if type(value) is list:
+                self._outputAttributes[attribute] = value[0]
+            else:
+                self._outputAttributes[attribute] = value
 
 
     def getOutputs(self, onlyInheritable : bool = False):
@@ -25,6 +36,14 @@ class Observation:
                 if attribute.isInheritable() is True:
                     outputDict[attribute] = value
             return outputDict               # Attribute - Value
+            
+
+    def getOutputsList(self, onlyInheritable : bool = False):
+        outputDict = {}
+        for attribute, value in self._outputAttributes.items():
+            if onlyInheritable is False or attribute.isInheritable() is True:
+                outputDict[attribute] = [value]
+        return outputDict               # Attribute -  List of Values
         
 
     def setOutput(self, attribute : Attribute, value : float):
@@ -33,10 +52,15 @@ class Observation:
 
 
     def getInputs(self):
-        inputs = {}     # Attribute - Value
+        inputs = {}     # Attribute - List of values
         for obs in self._inputObservations:
-            inputs.update(obs.getOutputs())
-        return inputs
+            newInputs = obs.getOutputs()
+            for attr, value in newInputs.items():
+                if attr in inputs:
+                    inputs[attr].append(value)
+                else:
+                    inputs[attr] = [value]
+        return inputs   # Attribute - List of values
 
 
     def getOutput(self, attribute : Attribute = None, attributeName : str = None):

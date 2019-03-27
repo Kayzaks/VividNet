@@ -27,11 +27,19 @@ def rmse(y_true, y_pred):
 class NeuralNet:
     def __init__(self, inputMapping : dict, outputMapping : dict, neuralNetName : str, swapInputOutput : bool):
         self._name          : str   = neuralNetName
-        self._inputMapping  : dict  = inputMapping                      # Attribute - Index
-        self._outputMapping : dict  = outputMapping                     # Attribute - Index
+        self._inputMapping  : dict  = inputMapping                      # Attribute - List of Indices
+        self._outputMapping : dict  = outputMapping                     # Attribute - List of Indices
         self._swapInOut     : bool  = swapInputOutput
-        self._inputShape    : tuple = (1, max(inputMapping.values())  + 1)
-        self._numOutputs    : int   = max(outputMapping.values()) + 1
+
+        lenInputs = 0
+        lenOutputs = 0
+        for idxList in inputMapping.values():
+            lenInputs = lenInputs + len(idxList)
+        for idxList in outputMapping.values():
+            lenOutputs = lenOutputs + len(idxList)
+
+        self._inputShape    : tuple = (1, lenInputs)
+        self._numOutputs    : int   = lenOutputs
 
         # Keras Model
         self._modelSplit            = [0, self._numOutputs]
@@ -176,7 +184,7 @@ class NeuralNet:
 
 
     def forwardPass(self, inputs : dict):
-        # inputs        # Attribute  -  Value
+        # inputs        # Attribute  -  List of Values
         
         if self.hasTraining() == False:
             print("Can't perform forward pass, as Neural Net has not been trained")
@@ -184,7 +192,7 @@ class NeuralNet:
         else:
             self.loadFromFile()
 
-        inputs = np.asarray(Utility.mapDataOneWayDictRev(inputs, self._inputMapping))
+        inputs = np.asarray(Utility.mapDataOneWayDictRevList(inputs, self._inputMapping))
         inputs = inputs.reshape(self._inputShape)
 
         results = []
@@ -195,4 +203,4 @@ class NeuralNet:
             else:
                 results = np.append(results, np.zeros(self._modelSplit[index + 1] - self._modelSplit[index]))
 
-        return Utility.mapDataOneWayRev(results, self._outputMapping)    # Attribute - Value
+        return Utility.mapDataOneWayRevList(results, self._outputMapping)    # Attribute - List of Values

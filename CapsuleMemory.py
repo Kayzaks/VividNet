@@ -86,7 +86,7 @@ class CapsuleMemory:
 
 
     def transformDataPoint(self, observation : Observation):
-        inputs = {}   # Attribute  - Value
+        inputs = {}   # Attribute  - List of Values
         outputs = {}   # Attribute  - Value
 
         # TODO: Do Preposition transformations
@@ -109,20 +109,21 @@ class CapsuleMemory:
             rotAttr = observation.getCapsule().getAttributeByName("Rotation")
             sizeAttr = observation.getCapsule().getAttributeByName("Size")
 
-            # Move to Origin
-            inputs[xAttr] = inputs[xAttr] - centerX
-            inputs[yAttr] = inputs[yAttr] - centerY
+            for idx, val in enumerate(inputs[xAttr]):
+                # Move to Origin
+                inputs[xAttr][idx] = inputs[xAttr][idx] - centerX
+                inputs[yAttr][idx] = inputs[yAttr][idx] - centerY
 
-            # Do Rotations
-            #inputs[rotAttr] = (inputs[rotAttr] + deltaRotate) % 1.0
-            #inputs[xAttr] = inputs[xAttr] * math.cos(-inputs[rotAttr] * math.pi * 2.0) - inputs[yAttr] * math.sin(-inputs[rotAttr] * math.pi * 2.0)
-            #inputs[yAttr] = inputs[xAttr] * math.sin(-inputs[rotAttr] * math.pi * 2.0) + inputs[yAttr] * math.cos(-inputs[rotAttr] * math.pi * 2.0)
+                # Do Rotations
+                #inputs[rotAttr][idx] = (inputs[rotAttr][idx] + deltaRotate) % 1.0
+                #inputs[xAttr][idx] = inputs[xAttr][idx] * math.cos(-inputs[rotAttr][idx] * math.pi * 2.0) - inputs[yAttr][idx] * math.sin(-inputs[rotAttr][idx] * math.pi * 2.0)
+                #inputs[yAttr][idx] = inputs[xAttr][idx] * math.sin(-inputs[rotAttr][idx] * math.pi * 2.0) + inputs[yAttr][idx] * math.cos(-inputs[rotAttr][idx] * math.pi * 2.0)
 
-            # Move away from Origin and translate
-            inputs[xAttr] = inputs[xAttr] + centerX + deltaX
-            inputs[yAttr] = inputs[yAttr] + centerY + deltaY
+                # Move away from Origin and translate
+                inputs[xAttr][idx] = inputs[xAttr][idx] + centerX + deltaX
+                inputs[yAttr][idx] = inputs[yAttr][idx] + centerY + deltaY
 
-        return inputs, self._lambdaY(inputs) 
+        return inputs, self._lambdaY(inputs)   # Attribute - List of Values ,  Attribute - Value
 
 
     def runXInferer(self, attributes : list, isTraining : bool):
@@ -131,8 +132,8 @@ class CapsuleMemory:
 
 
     def nextBatch(self, batchSize : int, inputMap : dict, outputMap : dict):
-        # inputMap  : dict   # Attribute - Index
-        # outputMap : dict   # Attribute - Index
+        # inputMap  : dict   # Attribute - List of Indices
+        # outputMap : dict   # Attribute - List of Indices
         yData = [[]] * batchSize
         xData = [[]] * batchSize
 
@@ -144,19 +145,32 @@ class CapsuleMemory:
                 yData[idx] = Utility.mapData(lyData, self._lambdaYMapping, outputMap)                
                 xData[idx] = Utility.mapData(lxData, self._lambdaXMapping, inputMap)
         else:
+            
+            lenInputMap = 0
+            lenOutputMap = 0
+            for idxList in inputMap.values():
+                lenInputMap = lenInputMap + len(idxList)
+            for idxList in outputMap.values():
+                lenOutputMap = lenOutputMap + len(idxList)
+
             # Only create True Data + Transformations
             for idx in range(batchSize):
-                xData[idx] = [0.0] * len(inputMap)
-                yData[idx] = [0.0] * len(outputMap)
+                xData[idx] = [0.0] * lenInputMap
+                yData[idx] = [0.0] * lenOutputMap
 
                 xVals, yVals = self.transformDataPoint(self._savedObservations[self._indexInEpoch])
 
-                for key, value in inputMap.items():
+                # xVals > Attribute - List of Values
+                # yVals > Attribute - Value
+
+                for key, idxList in inputMap.items():
                     if key in xVals:
-                        xData[idx][value] = xVals[key]
-                for key, value in outputMap.items():
+                        for idxidx, colIdx in enumerate(idxList):
+                            xData[idx][colIdx] = xVals[key][idxidx]
+                for key, idxList in outputMap.items():
                     if key in yVals:
-                        yData[idx][value] = yVals[key]
+                        for idxidx, colIdx in enumerate(idxList):
+                            yData[idx][colIdx] = yVals[key]
 
                 self._indexInEpoch = self._indexInEpoch + 1
                 if self._indexInEpoch >= len(self._savedObservations):

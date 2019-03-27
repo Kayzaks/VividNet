@@ -222,18 +222,26 @@ class Capsule:
                     else:
                         actualPermutation.append(-1)
 
-                inputObservations[route] = {}
+                inputObservations[route] = {}   # Capsule - List of Observations
                 inputs = {}
                 for index, capsule in enumerate(route.getFromCapsules()):
-                    inputObservations[route][capsule] = capsule.getObservation(actualPermutation[index])
-                    inputs.update(inputObservations[route][capsule].getOutputs(route.isSemantic())) 
+                    if capsule in inputObservations[route]:
+                        inputObservations[route][capsule].append(capsule.getObservation(actualPermutation[index]))
+                    else:                        
+                        inputObservations[route][capsule] = [capsule.getObservation(actualPermutation[index])]
+
+                    for attr, val in inputObservations[route][capsule][-1].getOutputs(route.isSemantic()).items():
+                        if attr in inputs:
+                            inputs[attr].append(val)
+                        else:
+                            inputs[attr] = [val]
 
                 # Routing by Agreement
                 # 1. Run gamma                      
-                outputAttributes[route] = route.runGammaFunction(inputs)
+                outputAttributes[route] = route.runGammaFunction(inputs)                # Attribute - List of Values
 
                 # 2. Run g
-                expectedInputs = route.runGFunction(outputAttributes[route], False)
+                expectedInputs = route.runGFunction(outputAttributes[route], False)     # Attribute - List of Values
 
                 # TODO: Should be split by capsule!!!
                 # 3. Calculate activation probability
@@ -268,7 +276,7 @@ class Capsule:
             # If no route is specified, we just take the first
             takenRoute = self._routes[0]
 
-        outputs = takenRoute.runGFunction(observation.getOutputs(), isTraining = withBackground)
+        outputs = takenRoute.runGFunction(observation.getOutputsList(), isTraining = withBackground)
         capsAttrValues = takenRoute.pairInputCapsuleAttributes(outputs)
 
         obsList = {}
@@ -281,20 +289,24 @@ class Capsule:
 
     def calculateRouteProbability(self, agreement : dict, observations : dict):
         # agreement         # Attribute - Value
-        # observations      # Capsule - Observation
+        # observations      # Capsule - List of Observations
         
         total = 0.0
-        for capsule, observation in observations.items():
-            perCaps = 0.0
-            attrCount = 0
-            for attribute, value in agreement.items():
-                if capsule.hasAttribute(attribute):
-                    perCaps = perCaps + abs(value)
-                    attrCount = attrCount + 1
-            # TODO: Missing the Mean probability
-            perCaps = (perCaps / float(max(1, attrCount))) * Utility.windowFunction(observation.getProbability() - 1, 0.0, 1.0)
-            total = total + perCaps
+        obsCount = 0
 
-        total = total / len(observations)
+        for capsule, observationList in observations.items():
+            for observation in observationList:
+                perCaps = 0.0
+                attrCount = 0
+                for attribute, value in agreement.items():
+                    if capsule.hasAttribute(attribute):
+                        perCaps = perCaps + abs(value)
+                        attrCount = attrCount + 1
+                # TODO: Missing the Mean probability
+                perCaps = (perCaps / float(max(1, attrCount))) * Utility.windowFunction(observation.getProbability() - 1, 0.0, 1.0)
+                total = total + perCaps
+                obsCount = obsCount + 1
+
+        total = total / obsCount
 
         return total
