@@ -81,6 +81,10 @@ if __name__ == '__main__':
 
     rocketCapsule = capsNet.addSemanticCapsule("Rocket", [sqObs, fin2Obs, fin3Obs])  
     shuttleCapsule = capsNet.addSemanticCapsule("Shuttle", [circObs, fin1Obs])  
+
+
+
+
 #    attr = { rocketCapsule.getAttributeByName("Position-X") : 0.5 - 0.25 * 0.7 * math.sin(rotation * math.pi * 2.0),
 #                rocketCapsule.getAttributeByName("Position-Y") :       0.5 + 0.25 * 0.7 * math.cos(rotation * math.pi * 2.0),
 #                rocketCapsule.getAttributeByName("Size") : 0.7,

@@ -58,6 +58,25 @@ class CapsuleMemory:
         return len(self._observations)
 
 
+    def getBestObservationAttributes(self):
+        bestObs = None
+        for obs in self._savedObservations:
+            if bestObs == None or obs.getProbability() > bestObs.getProbability():
+                bestObs = obs
+        
+        if bestObs is None:
+            attrVals = {}
+            if len(self._lambdaYMapping) > 0:
+                for idx, attr in self._lambdaYMapping.items():
+                    # We invent one with all Attributes set to 0.5 (mainly for primitive capsules)
+                    if attr not in attrVals:
+                        attrVals[attr] = [0.5]
+                    else:
+                        attrVals[attr].append(0.5)
+
+            return attrVals
+
+        return bestObs.getOutputsList()  # Attribute -  List of Values
 
 
     def cleanupObservations(self, offsetLabelX : str, offsetLabelY : str, offsetLabelRatio : str, targetLabelX : str, targetLabelY : str, targetLabelSize : str):

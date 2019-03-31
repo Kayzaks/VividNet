@@ -61,7 +61,7 @@ def cudaSDFTriangle(xx, yy, attributes):
 
 
 @cuda.jit
-def cudaKernel(ioArray, width, height, attributes, primitive):
+def cudaKernel(ioArray, width, height, attributes, primitive, isTraining):
     offset = cuda.threadIdx.x + cuda.blockIdx.x * cuda.blockDim.x
     xx = float32(offset / height) / float32(width)
     yy = float32(offset % height) / float32(height) 
@@ -80,7 +80,7 @@ def cudaKernel(ioArray, width, height, attributes, primitive):
 
     background = 0.0
 
-    if len(attributes) > 8:
+    if len(attributes) > 8 and isTraining is True:
         for i in range(3):
             newBack = 0.0
             if attributes[7 + i * 8] > -0.1 and attributes[7 + i * 8] < 0.1:

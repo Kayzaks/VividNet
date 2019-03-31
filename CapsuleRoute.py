@@ -28,6 +28,8 @@ class CapsuleRoute:
         self._neuralNetG            : NeuralNetG     = None
 
         self._isSemanticCapsule     : bool           = True
+        # TODO: Get Rotational Label from PrimitivesRenderer
+        self._rotationalLabels      : list           = ["Rotation"] # Per Axis
 
 
     def addObservations(self, observation : Observation):
@@ -165,11 +167,56 @@ class CapsuleRoute:
             self._neuralNetGamma.trainFromData(self._memory, showDebugOutput, specificSplit)
 
 
+    def applySymmetries(self, attributes : dict):
+        # attributes        # Attribute - List of Values
+
+        # We try to find the symmetries on the fly, as they are
+        # highly dependend on the current attributes
+        highestAgreementN = 1
+        highestAgreement = 0.9
+
+        originalRotations = {}  # Attribute - List of Values
+
+        for attr, valueList in attributes.items():
+            if attr.getName() in self._rotationalLabels:
+                originalRotations[attr] = valueList.copy()
+            
+        originalResult = self.runGFunction(attributes, isTraining = False)
+
+        for n in range(2, 10):
+            testAngle = 1.0 / n
+
+            for attr, valueList in attributes.items():
+                if attr.getName() in self._rotationalLabels:
+                    for idx in range(len(originalRotations[attr])):
+                        valueList[idx] = (originalRotations[attr][idx] + testAngle) % 1.0
+
+            gResult = self.runGFunction(attributes, isTraining = False)
+            agreement = self.agreementFunction(originalResult, gResult)
+
+            agreementSum = 0.0
+            for attr, value in agreement.items():
+                agreementSum += value
+            agreementSum = agreementSum / len(agreement)
+
+            # TODO: This is only for 1 Axis! 
+            if highestAgreement - agreementSum < 0.001:
+                highestAgreement = agreementSum
+                highestAgreementN = n
+        
+        for attr, valueList in attributes.items():
+            if attr.getName() in self._rotationalLabels:
+                for idx in range(len(attributes[attr])):
+                    attributes[attr][idx] = originalRotations[attr][idx] % (1 / highestAgreementN)
+
+        return attributes   # Attribute - List of Values
+
 
     def runGammaFunction(self, attributes : dict = None):
         # attributes        # Attribute - List of Values
+
         if self._isSemanticCapsule is False:
-            return self._neuralNetGamma.forwardPass(attributes) # Attribute - List of Values
+            return self.applySymmetries(self._neuralNetGamma.forwardPass(attributes)) # Attribute - List of Values
         else:
             # TODO: ACTUAL Semantic Calculation
             outputs = {}
@@ -182,7 +229,7 @@ class CapsuleRoute:
                         aggregate = aggregate + sum(inValueList)
 
                 outputs[attribute] = [aggregate / max(count, 1)]
-            return outputs  # Attribute - List of Values
+            return self.applySymmetries(outputs)  # Attribute - List of Values
 
 
     def runGFunction(self, attributes : dict = None, isTraining : bool = True):

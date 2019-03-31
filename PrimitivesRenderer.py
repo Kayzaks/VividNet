@@ -92,7 +92,7 @@ def cudaGreyDCT(xx, yy, dctMatrix, dctDimension):
 # -------------------- User Defined
 # Example Render Kernel for CUDA
 @cuda.jit
-def cudaKernelExample(ioArray, width, height, attributes, primitive):
+def cudaKernelExample(ioArray, width, height, attributes, primitive, isTraining):
     offset = cuda.threadIdx.x + cuda.blockIdx.x * cuda.blockDim.x
 
     # Color
@@ -105,7 +105,7 @@ def cudaKernelExample(ioArray, width, height, attributes, primitive):
 
 
 # Example Render Kernel for Python
-def pythonKernelExample(xx : float, yy : float, width : float, height : float, attributes : list, primitive : int):
+def pythonKernelExample(xx : float, yy : float, width : float, height : float, attributes : list, primitive : int, isTraining : bool):
     # Color and Depth
     color = [0.0] * 4
     color[0:3] = applyBackground(xx, yy, [attributes[0], attributes[0], attributes[0]], [0.0, 0.0, 0.0, 0.0], 2, color[3], True)
@@ -310,7 +310,7 @@ class PrimitivesRenderer:
 
         for xx in range(width):
             for yy in range(height):
-                color = self._kernel(float(xx) / fwidth, float(yy) / fheight, fwidth, fheight, attributes, int(primitive))
+                color = self._kernel(float(xx) / fwidth, float(yy) / fheight, fwidth, fheight, attributes, int(primitive), isTraining)
                 
                 if ( color[3] >= altBackgroundCutoff) and altBackground is not None:
                     pixels[(yy * width + xx) * 4]       = altBackground[(yy * width + xx) * 4]
@@ -340,7 +340,7 @@ class PrimitivesRenderer:
         threadsperblock     = 32 
         blockspergrid       = (width * height + (threadsperblock - 1)) // threadsperblock
         
-        (self._kernel)[blockspergrid, threadsperblock](returnImage, width, height, deviceAttributes, int(primitive))
+        (self._kernel)[blockspergrid, threadsperblock](returnImage, width, height, deviceAttributes, int(primitive), isTraining)
  
         for xx in range(width):
             for yy in range(height):
