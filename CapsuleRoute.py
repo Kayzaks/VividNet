@@ -6,8 +6,9 @@ from NeuralNetG import NeuralNetG
 from Attribute import Attribute
 from Utility import Utility
 from Observation import Observation
+from itertools import permutations
+from HyperParameters import HyperParameters
 
-from GraphicsUserInterface import GraphicsUserInterface
 class CapsuleRoute:
 
     def __init__(self, parentCapsule, capsuleRouteName : str, fromCapsules : list):
@@ -48,13 +49,29 @@ class CapsuleRoute:
         return self._memory.getNumObservations()
 
     def cleanupObservations(self, offsetLabelX : str, offsetLabelY : str, offsetLabelRatio : str, targetLabelX : str, targetLabelY : str, targetLabelSize : str):
-        self._memory.cleanupObservations(offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize)
+        self._memory.cleanupObservations(lambda attributes: self.applySymmetries(attributes), offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize)
 
     def removeObservation(self, observation : Observation):
         return self._memory.removeObservation(observation)
 
     def isSemantic(self):
         return self._isSemanticCapsule
+
+    def getInputCapsuleCount(self):
+        counts = {}
+        for caps in self._fromCapsules:
+            if caps in counts:
+                counts[caps] = counts[caps] + 1
+            else:
+                counts[caps] = 1
+
+        return counts # Capsule - Count
+
+    def getProbabilityCutOff(self):
+        if self._isSemanticCapsule is True:
+            return HyperParameters.SemanticProbabilityCutOff
+        else:
+            return HyperParameters.PrimitiveProbabilityCutOff
 
 
     def createSemanticRoute(self, initialObservations : list):
@@ -69,7 +86,7 @@ class CapsuleRoute:
                 else:
                     inputs[newAttr] = [newValue]
 
-        outputs = self.runGammaFunction(inputs)
+        outputs = self.runGammaFunction(inputs, False)
         newObservation = Observation(self._parentCapsule, self, initialObservations, outputs, 1.0)
 
         self._memory.addSavedObservations([newObservation])
@@ -167,56 +184,79 @@ class CapsuleRoute:
             self._neuralNetGamma.trainFromData(self._memory, showDebugOutput, specificSplit)
 
 
-    def applySymmetries(self, attributes : dict):
+
+    def getSymmetry(self, attributes : dict):
         # attributes        # Attribute - List of Values
+
+        if self._isSemanticCapsule is True and self._neuralNetG is None:
+            return attributes
 
         # We try to find the symmetries on the fly, as they are
         # highly dependend on the current attributes
-        highestAgreementN = 1
-        highestAgreement = 0.9
+        highestAgreementN = 0
 
-        originalRotations = {}  # Attribute - List of Values
+        copyRotations = {}  # Attribute - List of Values
 
         for attr, valueList in attributes.items():
-            if attr.getName() in self._rotationalLabels:
-                originalRotations[attr] = valueList.copy()
+            copyRotations[attr] = valueList.copy()
             
         originalResult = self.runGFunction(attributes, isTraining = False)
 
-        for n in range(2, 10):
-            testAngle = 1.0 / n
+        n = 2
+        while(n <= 20):    
+            gResult = {}
+            agreement = {}
+            testAngle = 1.0 / float(n)
 
-            for attr, valueList in attributes.items():
+            for attr, valueList in copyRotations.items():
                 if attr.getName() in self._rotationalLabels:
-                    for idx in range(len(originalRotations[attr])):
-                        valueList[idx] = (originalRotations[attr][idx] + testAngle) % 1.0
+                    for idx in range(len(attributes[attr])):
+                        copyRotations[attr][idx] = (attributes[attr][idx] + testAngle) % 1.0
 
-            gResult = self.runGFunction(attributes, isTraining = False)
+            gResult = self.runGFunction(copyRotations, isTraining = False)
             agreement = self.agreementFunction(originalResult, gResult)
 
             agreementSum = 0.0
-            for attr, value in agreement.items():
-                agreementSum += value
-            agreementSum = agreementSum / len(agreement)
+            totLen = 0
+            for attr, valueList in agreement.items():
+                agreementSum += sum(valueList)
+                totLen += len(valueList)
+            agreementSum = agreementSum / totLen
 
             # TODO: This is only for 1 Axis! 
-            if highestAgreement - agreementSum < 0.001:
-                highestAgreement = agreementSum
+            if agreementSum > HyperParameters.SymmetryCutOff:
+                # Yes, we do have a Symmetry! Can we go deeper?
                 highestAgreementN = n
+                n = n * 2
+            elif highestAgreementN > 0 or (highestAgreementN == 0 and n >= 9):
+                # Either we found symmetry
+                # or we are doing so tiny rotations that agreement will happen by default
+                break
+            else:
+                n = n + 1
         
-        for attr, valueList in attributes.items():
+        return (1 / max(1, highestAgreementN))
+
+
+    def applySymmetries(self, attributes : dict):
+        # attributes        # Attribute - List of Values
+
+        symmetry = self.getSymmetry(attributes)
+        print(symmetry)
+        
+        for attr in attributes.keys():
             if attr.getName() in self._rotationalLabels:
                 for idx in range(len(attributes[attr])):
-                    attributes[attr][idx] = originalRotations[attr][idx] % (1 / highestAgreementN)
+                    attributes[attr][idx] = attributes[attr][idx] % symmetry
 
         return attributes   # Attribute - List of Values
 
 
-    def runGammaFunction(self, attributes : dict = None):
+    def runGammaFunction(self, attributes : dict = None, isTraining : bool = True):
         # attributes        # Attribute - List of Values
 
         if self._isSemanticCapsule is False:
-            return self.applySymmetries(self._neuralNetGamma.forwardPass(attributes)) # Attribute - List of Values
+            return self._neuralNetGamma.forwardPass(attributes) # Attribute - List of Values
         else:
             # TODO: ACTUAL Semantic Calculation
             outputs = {}
@@ -229,7 +269,7 @@ class CapsuleRoute:
                         aggregate = aggregate + sum(inValueList)
 
                 outputs[attribute] = [aggregate / max(count, 1)]
-            return self.applySymmetries(outputs)  # Attribute - List of Values
+            return outputs  # Attribute - List of Values
 
 
     def runGFunction(self, attributes : dict = None, isTraining : bool = True):
@@ -248,20 +288,30 @@ class CapsuleRoute:
         if self._isSemanticCapsule is False:
             outputs = self._agreementFunctionLambda(attributes1, attributes2)
         else:
-            outputs = CapsuleRoute.semanticAgreementFunction(attributes1, attributes2)
+            outputs = self.semanticAgreementFunction(attributes1, attributes2)
             
-        return outputs # Attribute - Value
+        return outputs # Attribute - List of Value
 
 
-    @staticmethod
-    def semanticAgreementFunction(attributes1 : dict, attributes2 : dict):
+    def semanticAgreementFunction(self, attributes1 : dict, attributes2 : dict):
         # attributes1       # Attribute - List of Values
         # attributes2       # Attribute - List of Values
         outputs = {}
-        for attribute, valueList in attributes1.items():
-            # TODO: Try out all permutations?
-            # TODO: This is wrong, the sum is a bad measure
-            outputs[attribute] = Utility.windowFunction(sum(valueList) - sum(attributes2[attribute]), 0.1, 0.1)
-            
-        return outputs # Attribute - Value
+        bestAgreement = 0.0
+        for caps, count in self.getInputCapsuleCount().items():
+            newOutputs = {}
+            for capsPerm in permutations(range(count)):
+                testOutputs = {}
+                # TODO: Weigh each attribute by importance to agreement
+                for attr in caps.getAttributes():
+                    testOutputs[attr] = []
+                    for idx1, idx2 in enumerate(capsPerm):
+                        testOutputs[attr].append(Utility.windowFunction(attributes1[attr][idx1] - attributes2[attr][idx2], HyperParameters.SemAgreementWidth, HyperParameters.SemAgreementFallOff))
+
+                testAgreement = sum([sum(valList) for valList in testOutputs.values()])
+                if testAgreement > bestAgreement:
+                    newOutputs = testOutputs
+            outputs.update(newOutputs)
+
+        return outputs # Attribute - List of Value
         

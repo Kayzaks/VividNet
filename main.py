@@ -15,6 +15,13 @@ from CapsuleNetwork import CapsuleNetwork
 from Observation import Observation
 
 
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.5
+set_session(tf.Session(config=config))
+
+
 if __name__ == '__main__':
     testUI = GraphicsUserInterface()
 
@@ -151,6 +158,7 @@ if __name__ == '__main__':
                     triangleCapsule.getAttributeByName("Intensity") : 0.1,
                     triangleCapsule.getAttributeByName("Strength") : 0.4 * spsize })
 
+        # Left Fin
         obsDicts.append({ triangleCapsule.getAttributeByName("Position-X") : 0.5 - 0.25 * spsize * math.cos(rotation * math.pi * 2.0) - 0.25 * spsize * math.sin(rotation * math.pi * 2.0),
                     triangleCapsule.getAttributeByName("Position-Y") :       0.5 - 0.25 * spsize * math.sin(rotation * math.pi * 2.0) + 0.25 * spsize * math.cos(rotation * math.pi * 2.0),
                     triangleCapsule.getAttributeByName("Size") : 0.25 * 0.6 * spsize,
@@ -159,6 +167,7 @@ if __name__ == '__main__':
                     triangleCapsule.getAttributeByName("Intensity") : 0.1,
                     triangleCapsule.getAttributeByName("Strength") : 0.4 * spsize })
 
+        # Right Fin
         obsDicts.append({ triangleCapsule.getAttributeByName("Position-X") : 0.5 + 0.25 * spsize * math.cos(rotation * math.pi * 2.0) - 0.25 * spsize * math.sin(rotation * math.pi * 2.0),
                     triangleCapsule.getAttributeByName("Position-Y") :       0.5 + 0.25 * spsize * math.sin(rotation * math.pi * 2.0) + 0.25 * spsize * math.cos(rotation * math.pi * 2.0),
                     triangleCapsule.getAttributeByName("Size") : 0.25 * 0.6 * spsize,
@@ -178,8 +187,7 @@ if __name__ == '__main__':
         #imageObserved = np.zeros((shape[0] * shape[1] * 4))
 
         for capsule in allObs.keys():
-            print(len(allObs[capsule]))
-            print(capsule.getName())
+            print(str(len(allObs[capsule])) + "x " + capsule.getName())
             for index, obs in enumerate(allObs[capsule]):
                 print("Observation " + str(index) + " ------------")
                 obs.printOutputs(False)

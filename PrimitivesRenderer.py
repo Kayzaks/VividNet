@@ -214,7 +214,7 @@ class PrimitivesRenderer:
                 # We only check those pixels that contain the actual primitive and not just background
                 if depth < 1.0:
                     intensityAttr = capsule.getAttributeByName("PixelC-" + str(xx) + "-" + str(yy))
-                    outputs[intensityAttr] = Utility.windowFunction(attributes1[intensityAttr][0] - attributes2[intensityAttr][0], HyperParameters.PrimAgreementWidth, HyperParameters.PrimAgreementFallOff)
+                    outputs[intensityAttr] = [Utility.windowFunction(attributes1[intensityAttr][0] - attributes2[intensityAttr][0], HyperParameters.PrimAgreementWidth, HyperParameters.PrimAgreementFallOff)]
         return outputs
 
 

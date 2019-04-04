@@ -1,10 +1,6 @@
-import autokeras as ak
+
 import numpy as np
 from time import time
-from autokeras.nn.loss_function import regression_loss
-from autokeras.image.image_supervised import ImageSupervised, PortableImageRegressor
-from autokeras.nn.metric import Accuracy, MSE
-from autokeras.utils import pickle_to_file, pickle_from_file
 import keyboard
 import threading
 from Utility import Utility
@@ -26,6 +22,7 @@ def rmse(y_true, y_pred):
 
 class NeuralNet:
     def __init__(self, inputMapping : dict, outputMapping : dict, neuralNetName : str, swapInputOutput : bool):
+                
         self._name          : str   = neuralNetName
         self._inputMapping  : dict  = inputMapping                      # Attribute - List of Indices
         self._outputMapping : dict  = outputMapping                     # Attribute - List of Indices

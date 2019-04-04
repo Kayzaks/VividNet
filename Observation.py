@@ -107,6 +107,13 @@ class Observation:
         return self._capsule
 
 
+    def isZeroObservation(self):
+        for value in self._outputAttributes.values():
+            if abs(value) > 0.01:
+                return True
+        return False
+
+    
     def offset(self, offsetLabelX : str, offsetLabelY : str, offsetLabelRatio : str, targetLabelX : str, targetLabelY : str, targetLabelSize : str):
         # We can only offset by one set of attributes, so get any Capsule from the list (Should only be
         # one when this method is called anyways)
@@ -122,3 +129,18 @@ class Observation:
                 self._outputAttributes[attribute] = value * offsetRatio + offsetY
             if attribute.getName() == targetLabelSize:
                 self._outputAttributes[attribute] = value * offsetRatio
+
+
+    def cleanupSymmetries(self, applySymmetries):
+        # applySymmetries  # Lambda attributes -> attributes
+        print("    Cleaning Up   " + self._capsule.getName())
+
+        self.printOutputs(True)
+        print(" -> ")
+
+        newOutputs = applySymmetries(self.getOutputsList())
+
+        for attr, valList in newOutputs.items():
+            self._outputAttributes[attr] = valList[0]
+            
+        self.printOutputs(True)

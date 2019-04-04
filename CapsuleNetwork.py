@@ -8,6 +8,8 @@ import math
 import numpy as np
 import matplotlib.patches as patches
 
+import time
+
 class CapsuleNetwork:
 
     def __init__(self):
@@ -105,6 +107,13 @@ class CapsuleNetwork:
         print("Capsule Network shown an Image of size (" + str(width) + ", " + str(height) + ")")
 
         offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize = self._renderer.getOffsetLabels()
+        
+
+
+
+        startTime = time.time()
+
+
 
         for filterShape, capsule in self._pixelCapsules.items():
             if filterShape[0] <= width and filterShape[1] <= height:
@@ -138,10 +147,26 @@ class CapsuleNetwork:
 
         allObs = {}     # Capsule - List Of Observations
 
+
+
+        print("Time 1 - " + str(time.time() - startTime))
+        startTime = time.time()
+
+
+
+
+
         for capsule in self._primitiveCapsules:
             capsule.forwardPass()
             capsule.cleanupObservations(offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize)
             allObs[capsule] = capsule.getObservations()
+
+
+
+
+        print("Time 2 - " + str(time.time() - startTime))
+        startTime = time.time()
+
 
 
         for layer in range(self._numSemanticLayers):
@@ -150,6 +175,10 @@ class CapsuleNetwork:
                 capsule.forwardPass()
                 capsule.cleanupObservations()
                 allObs[capsule] = capsule.getObservations()
+
+
+        print("Time 3 - " + str(time.time() - startTime))
+
 
         return allObs   # Capsule - List Of Observations
 
@@ -180,9 +209,6 @@ class CapsuleNetwork:
                     
                     xOffset1 = int(xOffset1 * float(max(width, height)))
                     yOffset1 = int(yOffset1 * float(max(width, height)))
-
-                    print(capsule.getName())
-                    print(len(observation.getInputObservations()))
 
                     for inObs in observation.getInputObservations():
                         xOffset2 = inObs.getOutput(inObs.getCapsule().getAttributeByName(targetLabelX))

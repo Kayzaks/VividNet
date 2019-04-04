@@ -79,21 +79,28 @@ class CapsuleMemory:
         return bestObs.getOutputsList()  # Attribute -  List of Values
 
 
-    def cleanupObservations(self, offsetLabelX : str, offsetLabelY : str, offsetLabelRatio : str, targetLabelX : str, targetLabelY : str, targetLabelSize : str):
+    def cleanupObservations(self, applySymmetries, offsetLabelX : str, offsetLabelY : str, offsetLabelRatio : str, targetLabelX : str, targetLabelY : str, targetLabelSize : str):
         if offsetLabelX is not None and offsetLabelY is not None and offsetLabelRatio is not None:
             for observation in self._observations:
                 observation.offset(offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize)
+
 
         sortedObs = sorted(self._observations, reverse = True, key = (lambda x : x.getProbability()))
         
         for index, obs in enumerate(sortedObs):
             for index2 in range(index + 1, len(sortedObs)):
                 if sortedObs[index2] in self._observations:
-                    if CapsuleMemory.checkSimilarObservations(obs.getOutputs(), sortedObs[index2].getOutputs()) > HyperParameters.SimilarObservationsCutOff:
+                    if sortedObs[index2].isZeroObservation():
                         self.removeObservation(sortedObs[index2])
-                    # TEST:
-                    if sortedObs[index2].getOutput(attributeName = "Size") * sortedObs[index2].getOutput(attributeName = "Aspect-Ratio") < 0.08:
+                    elif CapsuleMemory.checkSimilarObservations(obs.getOutputs(), sortedObs[index2].getOutputs()) > HyperParameters.SimilarObservationsCutOff:
                         self.removeObservation(sortedObs[index2])
+                    # TODO: Remove too small detections? TEST:
+                    elif sortedObs[index2].getOutput(attributeName = "Size") * sortedObs[index2].getOutput(attributeName = "Aspect-Ratio") < 0.08:
+                        self.removeObservation(sortedObs[index2])
+
+
+        for observation in self._observations:
+            observation.cleanupSymmetries(applySymmetries)
 
 
     def removeObservation(self, observation : Observation):
@@ -104,43 +111,58 @@ class CapsuleMemory:
 
 
 
-    def transformDataPoint(self, observation : Observation):
-        inputs = {}   # Attribute  - List of Values
-        outputs = {}   # Attribute  - Value
+    def transformDataPoint(self, initialObservation : Observation, symmetries : dict):
+        # symmetries   # Capsule    - Symmetry
+        inputs = {}    # Attribute  - List of Values
+        outputs = {}   # Attribute  - List of Values
 
         # TODO: Do Preposition transformations
         # TODO: Do Adjective transformations
-        inputs = observation.getInputs()
+        inputs = initialObservation.getInputs()
         outputs = self._lambdaY(inputs)
 
-        centerX = [value for (key, value) in outputs.items() if key.getName() == "Position-X"][0]
-        centerY = [value for (key, value) in outputs.items() if key.getName() == "Position-Y"][0]
+        centerX = [valueList for (key, valueList) in outputs.items() if key.getName() == "Position-X"][0][0]
+        centerY = [valueList for (key, valueList) in outputs.items() if key.getName() == "Position-Y"][0][0]
 
         deltaX = (random.random() - 0.5) * 2.0
         deltaY = (random.random() - 0.5) * 2.0
         deltaRotate = (random.random() - 0.5) * 2.0
         deltaSize = (random.random() - 0.5) * 2.0
 
+        capsIdx = {} # Capsule - Count
+
         # Rotation
-        for observation in observation.getInputObservations():
+        for observation in initialObservation.getInputObservations():
             xAttr = observation.getCapsule().getAttributeByName("Position-X")
             yAttr = observation.getCapsule().getAttributeByName("Position-Y")
             rotAttr = observation.getCapsule().getAttributeByName("Rotation")
             sizeAttr = observation.getCapsule().getAttributeByName("Size")
 
-            for idx, val in enumerate(inputs[xAttr]):
-                # Move to Origin
-                inputs[xAttr][idx] = inputs[xAttr][idx] - centerX
-                inputs[yAttr][idx] = inputs[yAttr][idx] - centerY
+            # Hacky... Wacky...
+            if observation.getCapsule() in capsIdx:
+                capsIdx[observation.getCapsule()] += 1
+            else:
+                capsIdx[observation.getCapsule()] = 0
+            
+            idx = capsIdx[observation.getCapsule()]
 
-                # Do Rotations
-                #inputs[rotAttr][idx] = (inputs[rotAttr][idx] + deltaRotate) % 1.0
-                #inputs[xAttr][idx] = inputs[xAttr][idx] * math.cos(-inputs[rotAttr][idx] * math.pi * 2.0) - inputs[yAttr][idx] * math.sin(-inputs[rotAttr][idx] * math.pi * 2.0)
-                #inputs[yAttr][idx] = inputs[xAttr][idx] * math.sin(-inputs[rotAttr][idx] * math.pi * 2.0) + inputs[yAttr][idx] * math.cos(-inputs[rotAttr][idx] * math.pi * 2.0)
+            # Apply Symmetries
+            inputs[rotAttr][idx] = (inputs[rotAttr][idx] + deltaRotate) % symmetries[observation.getCapsule()]
+            
+            # Move to Origin
+            inputs[xAttr][idx] = inputs[xAttr][idx] - centerX
+            inputs[yAttr][idx] = inputs[yAttr][idx] - centerY
 
-                # Move away from Origin and translate
-                inputs[xAttr][idx] = inputs[xAttr][idx] + centerX + deltaX
-                inputs[yAttr][idx] = inputs[yAttr][idx] + centerY + deltaY
+            # Apply Rotations To Coordinates
+            inputs[xAttr][idx] = inputs[xAttr][idx] * math.cos(inputs[rotAttr][idx] * math.pi * 2.0) - inputs[yAttr][idx] * math.sin(inputs[rotAttr][idx] * math.pi * 2.0)
+            inputs[yAttr][idx] = inputs[xAttr][idx] * math.sin(inputs[rotAttr][idx] * math.pi * 2.0) + inputs[yAttr][idx] * math.cos(inputs[rotAttr][idx] * math.pi * 2.0)
+
+            # TODO: Change Size
+
+            # Move away from Origin and translate
+            inputs[xAttr][idx] = inputs[xAttr][idx] + centerX + deltaX
+            inputs[yAttr][idx] = inputs[yAttr][idx] + centerY + deltaY
+
 
         return inputs, self._lambdaY(inputs)   # Attribute - List of Values ,  Attribute - Value
 
@@ -155,6 +177,14 @@ class CapsuleMemory:
         # outputMap : dict   # Attribute - List of Indices
         yData = [[]] * batchSize
         xData = [[]] * batchSize
+
+        # Fill Symmetries
+        # TODO: This is not complete, as only one Symmetry (ie one Route) is filled
+        symmetries = {}
+        for savedObs in self._savedObservations:
+            for obs in savedObs.getInputObservations():
+                attributes = obs.getOutputsList()
+                symmetries[obs.getCapsule()] = obs.getCapsule().getSymmetry(attributes)
 
         if self._lambdaXInferer is not None and self._lambdaYGenerator is not None:
             # Only create Fictive Data
@@ -177,7 +207,7 @@ class CapsuleMemory:
                 xData[idx] = [0.0] * lenInputMap
                 yData[idx] = [0.0] * lenOutputMap
 
-                xVals, yVals = self.transformDataPoint(self._savedObservations[self._indexInEpoch])
+                xVals, yVals = self.transformDataPoint(self._savedObservations[self._indexInEpoch], symmetries)
 
                 # xVals > Attribute - List of Values
                 # yVals > Attribute - Value
