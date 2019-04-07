@@ -74,10 +74,12 @@ class Observation:
 
     
     def printOutputs(self, includeNonInheritable : bool):
+        print(self._capsule.getName())
         print("Probability - " + str(int(self._outputProbability * 100)) + "%")
         for attribute, value in self._outputAttributes.items():
             if includeNonInheritable is True or attribute.isInheritable() is True:
                 print(attribute.getName() + ": " + str(value))
+        print("-------------------------")
 
 
     def getProbability(self):
@@ -110,8 +112,8 @@ class Observation:
     def isZeroObservation(self):
         for value in self._outputAttributes.values():
             if abs(value) > 0.01:
-                return True
-        return False
+                return False
+        return True
 
     
     def offset(self, offsetLabelX : str, offsetLabelY : str, offsetLabelRatio : str, targetLabelX : str, targetLabelY : str, targetLabelSize : str):
@@ -133,14 +135,7 @@ class Observation:
 
     def cleanupSymmetries(self, applySymmetries):
         # applySymmetries  # Lambda attributes -> attributes
-        print("    Cleaning Up   " + self._capsule.getName())
-
-        self.printOutputs(True)
-        print(" -> ")
-
         newOutputs = applySymmetries(self.getOutputsList())
 
         for attr, valList in newOutputs.items():
             self._outputAttributes[attr] = valList[0]
-            
-        self.printOutputs(True)

@@ -186,19 +186,21 @@ class CapsuleNetwork:
     def generateImage(self, width : int, height : int, observations : dict, withBackground : bool = False):
         # observations          # Capsule   -   List of Observations
 
-        semantics = []
-        texts = []
+        semantics = {} #  Observation - List of Patches
+        texts = []     #  List of (X, Y, Text)
         offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize = self._renderer.getOffsetLabels()
         
 
         # We make a full copy to work on
-        obs = {}
+        obs = {}    # Capsule - List of Observations
+        obsMap = {} # Copied Observation - Actual Observation
         for capsule, obsList in observations.items():
             obs[capsule] = []
             for observation in obsList:
                 # TODO: Input Observations are still the original..
                 obs[capsule].append(Observation(capsule, observation.getTakenRoute(), observation.getInputObservations(), 
                                                 observation.getOutputs(), observation.getProbability()))
+                obsMap[obs[capsule][-1]] = observation
 
         # Generate Semantic Labels for Semantic Capsules
         for capsule, obsList in obs.items():
@@ -210,6 +212,8 @@ class CapsuleNetwork:
                     xOffset1 = int(xOffset1 * float(max(width, height)))
                     yOffset1 = int(yOffset1 * float(max(width, height)))
 
+                    semantics[obsMap[observation]] = []
+    
                     for inObs in observation.getInputObservations():
                         xOffset2 = inObs.getOutput(inObs.getCapsule().getAttributeByName(targetLabelX))
                         yOffset2 = inObs.getOutput(inObs.getCapsule().getAttributeByName(targetLabelY))
@@ -217,9 +221,9 @@ class CapsuleNetwork:
                         xOffset2 = int(xOffset2 * float(max(width, height)))
                         yOffset2 = int(yOffset2 * float(max(width, height)))
                         
-                        semantics.append(patches.Arrow(xOffset1, yOffset1, xOffset2 - xOffset1, yOffset2 - yOffset1, linewidth = 1, edgecolor = 'r', facecolor = 'none' ))
+                        semantics[obsMap[observation]].append(patches.Arrow(xOffset1, yOffset1, xOffset2 - xOffset1, yOffset2 - yOffset1, linewidth = 1, edgecolor = 'r', facecolor = 'none' ))
                         
-                    semantics.append(patches.Circle((xOffset1, yOffset1), radius = 1, color = 'r'))    
+                    semantics[obsMap[observation]].append(patches.Circle((xOffset1, yOffset1), radius = 1, color = 'r'))    
 
 
         for layerIndex in range(self._numSemanticLayers - 1, -1, -1):
@@ -291,7 +295,7 @@ class CapsuleNetwork:
                         if withBackground is True or depth < 1.0:
                             image[((yy + yOffset) * width + xx + xOffset) * 4] = pixelObs.getOutput(pixelLay.getAttributeByName("PixelC-" + str(xx) + "-" + str(yy)))
 
-            semantics.append(patches.Rectangle((minX, minY), maxX - minX, maxY - minY, linewidth = 1, edgecolor = 'y', facecolor = 'none'))
+            semantics[obsMap[observation]] = [patches.Rectangle((minX, minY), maxX - minX, maxY - minY, linewidth = 1, edgecolor = 'y', facecolor = 'none')]
             texts.append((minX, minY, capsule.getName()))
 
         return image, semantics, texts    # Linear List of Pixels

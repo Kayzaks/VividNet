@@ -242,7 +242,6 @@ class CapsuleRoute:
         # attributes        # Attribute - List of Values
 
         symmetry = self.getSymmetry(attributes)
-        print(symmetry)
         
         for attr in attributes.keys():
             if attr.getName() in self._rotationalLabels:

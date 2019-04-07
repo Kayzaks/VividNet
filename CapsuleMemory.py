@@ -88,11 +88,11 @@ class CapsuleMemory:
         sortedObs = sorted(self._observations, reverse = True, key = (lambda x : x.getProbability()))
         
         for index, obs in enumerate(sortedObs):
-            for index2 in range(index + 1, len(sortedObs)):
+            for index2 in range(index, len(sortedObs)):
                 if sortedObs[index2] in self._observations:
                     if sortedObs[index2].isZeroObservation():
                         self.removeObservation(sortedObs[index2])
-                    elif CapsuleMemory.checkSimilarObservations(obs.getOutputs(), sortedObs[index2].getOutputs()) > HyperParameters.SimilarObservationsCutOff:
+                    elif index2 > index and CapsuleMemory.checkSimilarObservations(obs.getOutputs(), sortedObs[index2].getOutputs()) > HyperParameters.SimilarObservationsCutOff:
                         self.removeObservation(sortedObs[index2])
                     # TODO: Remove too small detections? TEST:
                     elif sortedObs[index2].getOutput(attributeName = "Size") * sortedObs[index2].getOutput(attributeName = "Aspect-Ratio") < 0.08:
