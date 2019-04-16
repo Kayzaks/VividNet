@@ -18,6 +18,9 @@ from keras.callbacks import TensorBoard
 
 def rmse(y_true, y_pred):
 	return backend.sqrt(backend.mean(backend.square(y_pred - y_true), axis=-1))
+    
+def meanl1(y_true, y_pred):
+	return backend.mean(backend.abs(y_pred - y_true), axis=-1)
 
 
 class NeuralNet:
@@ -131,13 +134,11 @@ class NeuralNet:
             X_train = X_train.reshape(tuple(trainShape))
             X_test = X_test.reshape(tuple(testShape))
 
-            numAttributes = len(Y_train[0])
+            numAttributes = len(Y_train[0])            
             trainList = list(range(self._numModels))
-
 
             if onlyTrain is not None:
                 trainList = onlyTrain
-
 
             for index in trainList:
 
@@ -156,7 +157,7 @@ class NeuralNet:
 
                 opt = keras.optimizers.Adam(lr=HyperParameters.AdamLearningRate)
 
-                self._nnModel[index].compile(loss="mean_squared_error",
+                self._nnModel[index].compile(loss="logcosh",
                             optimizer=opt,
                             metrics=[rmse])
 
@@ -199,5 +200,5 @@ class NeuralNet:
                 results = np.append(results, self._nnModel[index].predict(inputs))
             else:
                 results = np.append(results, np.zeros(self._modelSplit[index + 1] - self._modelSplit[index]))
-
+                
         return Utility.mapDataOneWayRevList(results, self._outputMapping)    # Attribute - List of Values

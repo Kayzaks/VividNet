@@ -111,7 +111,7 @@ class CapsuleMemory:
 
 
 
-    def transformDataPoint(self, initialObservation : Observation, symmetries : dict):
+    def transformDataPoint(self, initialObservation : Observation, mainSymmetry : float, symmetries : dict):
         # symmetries   # Capsule    - Symmetry
         inputs = {}    # Attribute  - List of Values
         outputs = {}   # Attribute  - List of Values
@@ -119,52 +119,55 @@ class CapsuleMemory:
         # TODO: Do Preposition transformations
         # TODO: Do Adjective transformations
         inputs = initialObservation.getInputs()
+
         outputs = self._lambdaY(inputs)
 
         centerX = [valueList for (key, valueList) in outputs.items() if key.getName() == "Position-X"][0][0]
         centerY = [valueList for (key, valueList) in outputs.items() if key.getName() == "Position-Y"][0][0]
+        centerR = [valueList for (key, valueList) in outputs.items() if key.getName() == "Rotation"][0][0]
+        centerS = [valueList for (key, valueList) in outputs.items() if key.getName() == "Size"][0][0]
 
-        deltaX = (random.random() - 0.5) * 2.0
-        deltaY = (random.random() - 0.5) * 2.0
-        deltaRotate = (random.random() - 0.5) * 2.0
-        deltaSize = (random.random() - 0.5) * 2.0
+        deltaX = ((centerX + (random.random() - 0.5) * 2.0) % 1.0) - centerX
+        deltaY = ((centerY + (random.random() - 0.5) * 2.0) % 1.0) - centerY
+        deltaSize = ((centerS + (random.random() - 0.5) * 2.0) % 1.0) - centerS
+        deltaRotate = ((centerR + (random.random() - 0.5) * 2.0) % mainSymmetry) - centerR
 
         capsIdx = {} # Capsule - Count
 
         # Rotation
         for observation in initialObservation.getInputObservations():
-            xAttr = observation.getCapsule().getAttributeByName("Position-X")
-            yAttr = observation.getCapsule().getAttributeByName("Position-Y")
-            rotAttr = observation.getCapsule().getAttributeByName("Rotation")
-            sizeAttr = observation.getCapsule().getAttributeByName("Size")
+            currentCaps = observation.getCapsule()
+            xAttr = currentCaps.getAttributeByName("Position-X")
+            yAttr = currentCaps.getAttributeByName("Position-Y")
+            rotAttr = currentCaps.getAttributeByName("Rotation")
+            sizeAttr = currentCaps.getAttributeByName("Size")
 
             # Hacky... Wacky...
-            if observation.getCapsule() in capsIdx:
-                capsIdx[observation.getCapsule()] += 1
+            if currentCaps in capsIdx:
+                capsIdx[currentCaps] = capsIdx[currentCaps] + 1
             else:
-                capsIdx[observation.getCapsule()] = 0
+                capsIdx[currentCaps] = 0
             
-            idx = capsIdx[observation.getCapsule()]
+            idx = capsIdx[currentCaps]
 
             # Apply Symmetries
-            inputs[rotAttr][idx] = (inputs[rotAttr][idx] + deltaRotate) % symmetries[observation.getCapsule()]
-            
+            inputs[rotAttr][idx] = (inputs[rotAttr][idx] + deltaRotate) # % symmetries[currentCaps]
+
             # Move to Origin
             inputs[xAttr][idx] = inputs[xAttr][idx] - centerX
             inputs[yAttr][idx] = inputs[yAttr][idx] - centerY
 
             # Apply Rotations To Coordinates
-            inputs[xAttr][idx] = inputs[xAttr][idx] * math.cos(inputs[rotAttr][idx] * math.pi * 2.0) - inputs[yAttr][idx] * math.sin(inputs[rotAttr][idx] * math.pi * 2.0)
-            inputs[yAttr][idx] = inputs[xAttr][idx] * math.sin(inputs[rotAttr][idx] * math.pi * 2.0) + inputs[yAttr][idx] * math.cos(inputs[rotAttr][idx] * math.pi * 2.0)
+            newX = inputs[xAttr][idx] * math.cos(deltaRotate * math.pi * 2.0) - inputs[yAttr][idx] * math.sin(deltaRotate * math.pi * 2.0)
+            newY = inputs[xAttr][idx] * math.sin(deltaRotate * math.pi * 2.0) + inputs[yAttr][idx] * math.cos(deltaRotate * math.pi * 2.0)
 
             # TODO: Change Size
 
             # Move away from Origin and translate
-            inputs[xAttr][idx] = inputs[xAttr][idx] + centerX + deltaX
-            inputs[yAttr][idx] = inputs[yAttr][idx] + centerY + deltaY
+            inputs[xAttr][idx] = newX + centerX + deltaX
+            inputs[yAttr][idx] = newY + centerY + deltaY
 
-
-        return inputs, self._lambdaY(inputs)   # Attribute - List of Values ,  Attribute - Value
+        return inputs, self._lambdaY(inputs)   # Attribute - List of Values ,  Attribute - List of Values
 
 
     def runXInferer(self, attributes : list, isTraining : bool):
@@ -180,11 +183,12 @@ class CapsuleMemory:
 
         # Fill Symmetries
         # TODO: This is not complete, as only one Symmetry (ie one Route) is filled
+        mainSymmetries = 1.0
         symmetries = {}
         for savedObs in self._savedObservations:
+            mainSymmetries = savedObs.getCapsule().getSymmetryInverse(savedObs.getInputs())
             for obs in savedObs.getInputObservations():
-                attributes = obs.getOutputsList()
-                symmetries[obs.getCapsule()] = obs.getCapsule().getSymmetry(attributes)
+                symmetries[obs.getCapsule()] = obs.getCapsule().getSymmetry(obs.getOutputsList())
 
         if self._lambdaXInferer is not None and self._lambdaYGenerator is not None:
             # Only create Fictive Data
@@ -207,10 +211,10 @@ class CapsuleMemory:
                 xData[idx] = [0.0] * lenInputMap
                 yData[idx] = [0.0] * lenOutputMap
 
-                xVals, yVals = self.transformDataPoint(self._savedObservations[self._indexInEpoch], symmetries)
+                xVals, yVals = self.transformDataPoint(self._savedObservations[self._indexInEpoch], mainSymmetries, symmetries)
 
                 # xVals > Attribute - List of Values
-                # yVals > Attribute - Value
+                # yVals > Attribute - List of Values
 
                 for key, idxList in inputMap.items():
                     if key in xVals:
@@ -219,7 +223,7 @@ class CapsuleMemory:
                 for key, idxList in outputMap.items():
                     if key in yVals:
                         for idxidx, colIdx in enumerate(idxList):
-                            yData[idx][colIdx] = yVals[key]
+                            yData[idx][colIdx] = yVals[key][idxidx]
 
                 self._indexInEpoch = self._indexInEpoch + 1
                 if self._indexInEpoch >= len(self._savedObservations):

@@ -270,15 +270,32 @@ class Capsule:
             # If no route is specified, we just take the first
             takenRoute = self._routes[0]
 
-        outputs = takenRoute.runGFunction(observation.getOutputsList(), isTraining = withBackground)
-        capsAttrValues = takenRoute.pairInputCapsuleAttributes(outputs)
+        #if self.getName() == "Rocket":
+        #    print("XXXXXXXXXX ONE RUN")
+        #    for attr, vallist in observation.getOutputsList().items():
+        #        print(attr.getName())
+        #        print(vallist)
+
+        outputs = takenRoute.runGFunction(observation.getOutputsList(), isTraining = withBackground)    # Attribute - List of Values
+        capsAttrValues = takenRoute.pairInputCapsuleAttributes(outputs)                                 # Capsule - {Attribute - List of Values}
+
+
+        #if self.getName() == "Rocket":
+        #    print("X RUN")
+        #    for attr, vallist in outputs.items():
+        #        print(attr.getName())
+        #        print(vallist)
+
+
 
         obsList = {}
         for capsule, attrValues in capsAttrValues.items():
-            obsList[capsule] = Observation(capsule, None, [], attrValues, observation.getInputProbability(capsule))
-            observation.addInputObservation(obsList[capsule])    
+            obsList[capsule] = []
+            for index in range(len(list(attrValues.values())[0])):
+                obsList[capsule].append(Observation(capsule, None, [], attrValues, observation.getInputProbability(capsule), index))
+                observation.addInputObservation(obsList[capsule][-1])    
 
-        return obsList   # Capsule - Observation (with only outputs filled)
+        return obsList   # Capsule - List of Observations (with only outputs filled)
 
 
     def calculateRouteProbability(self, agreement : dict, observations : dict):
@@ -313,5 +330,12 @@ class Capsule:
 
 
     def getSymmetry(self, attributes : dict):
+        # Symmetries from Output
         # TODO: Choose a better route than simply the first...
         return self._routes[0].getSymmetry(attributes)
+        
+
+    def getSymmetryInverse(self, attributes : dict):
+        # Symmetries from Input
+        # TODO: Choose a better route than simply the first...
+        return self._routes[0].getSymmetryInverse(attributes)

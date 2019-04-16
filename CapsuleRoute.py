@@ -9,6 +9,8 @@ from Observation import Observation
 from itertools import permutations
 from HyperParameters import HyperParameters
 
+import math
+
 class CapsuleRoute:
 
     def __init__(self, parentCapsule, capsuleRouteName : str, fromCapsules : list):
@@ -135,16 +137,16 @@ class CapsuleRoute:
 
 
     def pairInputCapsuleAttributes(self, attributes : dict):
-        # attributes        # Attribute - Value
-        # We mostly work with {Attribute - Value} dictionaries without the associated capsule
+        # attributes        # Attribute - List of Values
+        # We mostly work with {Attribute - List of Values} dictionaries without the associated capsule
         # Here we just pair them back up again. Used to store in Observation
         outputs = {}
         for inputCapsule in self._fromCapsules:
             outputs[inputCapsule] = {}
-            for attribute, value in attributes.items():
+            for attribute, valueList in attributes.items():
                 if inputCapsule.hasAttribute(attribute):
-                    outputs[inputCapsule][attribute] = value
-        return outputs
+                    outputs[inputCapsule][attribute] = valueList
+        return outputs  # Capsule - {Attribute - List of Values}
 
 
 
@@ -187,6 +189,8 @@ class CapsuleRoute:
 
     def getSymmetry(self, attributes : dict):
         # attributes        # Attribute - List of Values
+
+        # Find symmetry from outputs
 
         if self._isSemanticCapsule is True and self._neuralNetG is None:
             return attributes
@@ -238,6 +242,88 @@ class CapsuleRoute:
         return (1 / max(1, highestAgreementN))
 
 
+    def getSymmetryInverse(self, attributes : dict):
+        # attributes        # Attribute - List of Values
+
+        # Find symmetry from inputs
+
+        # We try to find the symmetries on the fly, as they are
+        # highly dependend on the current attributes
+        highestAgreementN = 0
+
+
+        originalResult = self.runGammaFunction(attributes, isTraining = False)
+
+        # TODO: Remove all references to const strings
+
+        centerX = [valueList for (key, valueList) in originalResult.items() if key.getName() == "Position-X"][0][0]
+        centerY = [valueList for (key, valueList) in originalResult.items() if key.getName() == "Position-Y"][0][0]
+
+
+        originalInputs = {}  # Attribute - List of Values
+        copyInputs = {}  # Attribute - List of Values
+
+        for attr, valueList in attributes.items():
+            if attr.getName() == "Position-X":
+                originalInputs[attr] = []
+                for val in valueList:
+                    originalInputs[attr].append(val - centerX)
+            elif attr.getName() == "Position-Y":
+                originalInputs[attr] = []
+                for val in valueList:
+                    originalInputs[attr].append(val - centerY)
+            else:
+                originalInputs[attr] = valueList.copy()
+                
+
+        for attr, valueList in originalInputs.items():
+            copyInputs[attr] = valueList.copy()
+                  
+        
+        n = 2
+        while(n <= 20):    
+            gResult = {}
+            agreement = {}
+            testAngle = 1.0 / float(n)
+
+            for caps in self._fromCapsules:
+                xAttr = caps.getAttributeByName("Position-X")
+                yAttr = caps.getAttributeByName("Position-Y")
+                rAttr = caps.getAttributeByName("Rotation")
+
+                for idx in range(len(copyInputs[xAttr])):
+                    copyInputs[xAttr][idx] = originalInputs[xAttr][idx] * math.cos(-testAngle * math.pi * 2.0) - originalInputs[yAttr][idx] * math.sin(-testAngle * math.pi * 2.0)
+                    copyInputs[yAttr][idx] = originalInputs[xAttr][idx] * math.sin(-testAngle * math.pi * 2.0) + originalInputs[yAttr][idx] * math.cos(-testAngle * math.pi * 2.0)
+                    # TODO: Apply local rotational symmetries
+                    # copyInputs[rAttr][idx] = originalInputs[rAttr][idx] + testAngle
+
+
+            agreement = self.agreementFunction(copyInputs, originalInputs)
+
+            agreementSum = 0.0
+            totLen = 0
+            for attr, valueList in agreement.items():
+                # TODO: Only for testing till local symmetries are in
+                if attr.getName() != "Rotation":
+                    agreementSum += sum(valueList)
+                    totLen += len(valueList)
+            agreementSum = agreementSum / totLen
+            print(agreementSum)
+            # TODO: This is only for 1 Axis! 
+            if agreementSum > HyperParameters.SymmetryCutOff:
+                # Yes, we do have a Symmetry! Can we go deeper?
+                highestAgreementN = n
+                n = n * 2
+            elif highestAgreementN > 0 or (highestAgreementN == 0 and n >= 9):
+                # Either we found symmetry
+                # or we are doing so tiny rotations that agreement will happen by default
+                break
+            else:
+                n = n + 1
+        print((1 / max(1, highestAgreementN)))
+        return (1 / max(1, highestAgreementN))
+
+
     def applySymmetries(self, attributes : dict):
         # attributes        # Attribute - List of Values
 
@@ -264,10 +350,14 @@ class CapsuleRoute:
                 aggregate = 0.0
                 for inAttr, inValueList in attributes.items():
                     if inAttr.getName() == attribute.getName():
+                        # TEST: 
+                        #count = 1
+                        #aggregate = inValueList[0]
+                        #break
                         count = count + len(inValueList)
                         aggregate = aggregate + sum(inValueList)
-
                 outputs[attribute] = [aggregate / max(count, 1)]
+            
             return outputs  # Attribute - List of Values
 
 

@@ -229,16 +229,16 @@ class CapsuleNetwork:
         for layerIndex in range(self._numSemanticLayers - 1, -1, -1):
             # Iterate the list backwards
             for capsule in self._semanticLayers[layerIndex]:
-                if capsule in obs:
+                if capsule in obs.keys():
                     for observation in obs[capsule]:
                         # Only top level observed symbols that have not yet been generated
                         if not observation.getInputObservations():
-                            newObs = capsule.backwardPass(observation, False)
-                            for obsCaps, newObs in newObs.items():
+                            newObslist = capsule.backwardPass(observation, False)
+                            for obsCaps, newObs in newObslist.items():
                                 if obsCaps in obs:
-                                    obs[obsCaps].append(newObs)
+                                    obs[obsCaps].extend(newObs)
                                 else:
-                                    obs[obsCaps] = [newObs]
+                                    obs[obsCaps] = newObs
 
                     # Remove the parsed Observations
                     del obs[capsule]
@@ -268,34 +268,42 @@ class CapsuleNetwork:
 
             obsPixelLayer = capsule.backwardPass(observation, False)
 
-            pixelObs = list(obsPixelLayer.values())[0]
+            pixelObs = list(obsPixelLayer.values())[0][0]
             pixelLay = list(obsPixelLayer.keys())[0]
 
-            xOffset = int(xOffset * float(max(width, height))) - int(pixelShape[0] / 2)
-            yOffset = int(yOffset * float(max(width, height))) - int(pixelShape[1] / 2)
+            newxOffset = int(xOffset * float(max(width, height))) - int(pixelShape[0] / 2)
+            newyOffset = int(yOffset * float(max(width, height))) - int(pixelShape[1] / 2)
 
             # We actually have far more accurate segmentation (including rotation, etc), but its hard to do nicely in matplotlib,
             # so we decided to just box it roughly.
-            minX = xOffset + pixelShape[0]
-            maxX = xOffset
-            minY = yOffset + pixelShape[1]
-            maxY = yOffset
+            minX = newxOffset + pixelShape[0]
+            maxX = newxOffset
+            minY = newyOffset + pixelShape[1]
+            maxY = newyOffset
 
             for xx in range(pixelShape[0]):
                 for yy in range(pixelShape[1]):
-                    if xx + xOffset < width and xx + xOffset >= 0 and yy + yOffset < height and yy + yOffset >= 0:
+                    if xx + newxOffset < width and xx + newxOffset >= 0 and yy + newyOffset < height and yy + newyOffset >= 0:
                         depth = pixelObs.getOutput(pixelLay.getAttributeByName("PixelD-" + str(xx) + "-" + str(yy)))
                         
                         if depth < 1.0:
-                            minX = min(xx + xOffset, minX)
-                            maxX = max(xx + xOffset, maxX)
-                            minY = min(yy + yOffset, minY)
-                            maxY = max(yy + yOffset, maxY)
+                            minX = min(xx + newxOffset, minX)
+                            maxX = max(xx + newxOffset, maxX)
+                            minY = min(yy + newyOffset, minY)
+                            maxY = max(yy + newyOffset, maxY)
 
                         if withBackground is True or depth < 1.0:
-                            image[((yy + yOffset) * width + xx + xOffset) * 4] = pixelObs.getOutput(pixelLay.getAttributeByName("PixelC-" + str(xx) + "-" + str(yy)))
+                            image[((yy + newyOffset) * width + xx + newxOffset) * 4] = pixelObs.getOutput(pixelLay.getAttributeByName("PixelC-" + str(xx) + "-" + str(yy)))
 
-            semantics[obsMap[observation]] = [patches.Rectangle((minX, minY), maxX - minX, maxY - minY, linewidth = 1, edgecolor = 'y', facecolor = 'none')]
+            if observation in obsMap:
+                semantics[obsMap[observation]] = [patches.Rectangle((minX, minY), maxX - minX, maxY - minY, linewidth = 1, edgecolor = 'y', facecolor = 'none')]
+            else:
+                semantics[observation] = [patches.Rectangle((minX, minY), maxX - minX, maxY - minY, linewidth = 1, edgecolor = 'y', facecolor = 'none')]
+
+            observation.setOutput(capsule.getAttributeByName(targetLabelX), xOffset)
+            observation.setOutput(capsule.getAttributeByName(targetLabelY), yOffset)
+            observation.setOutput(capsule.getAttributeByName(targetLabelSize), size)
+
             texts.append((minX, minY, capsule.getName()))
 
         return image, semantics, texts    # Linear List of Pixels

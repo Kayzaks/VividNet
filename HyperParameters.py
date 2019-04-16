@@ -8,11 +8,11 @@ class HyperParameters:
 
     # Primitive Capsule Agreement
     PrimAgreementWidth = 0.0
-    PrimAgreementFallOff = 1.0 # 0.4
+    PrimAgreementFallOff = 1.0 
 
     # Semantic Capsule Agreement
-    SemAgreementWidth = 0.05
-    SemAgreementFallOff = 0.15
+    SemAgreementWidth = 0.0
+    SemAgreementFallOff = 0.20
 
     # Symmetry
     SymmetryCutOff = 0.95

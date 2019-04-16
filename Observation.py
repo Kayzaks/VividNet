@@ -2,7 +2,7 @@ from Attribute import Attribute
 
 class Observation:
 
-    def __init__(self, capsule, route, inputObservations : list, outputAttributes : dict, outputProbability : float):
+    def __init__(self, capsule, route, inputObservations : list, outputAttributes : dict, outputProbability : float, attrIndex : int = 0):
         # inputObservations                                                 # List of Observations      or   List of Lists of Observations
         # outputAttributes                                                  # Attribute - Value         or   Attribute - List of Values
         # inputProbabilities                                                # Capsule - Probability
@@ -22,7 +22,7 @@ class Observation:
 
         for attribute, value in outputAttributes.items():
             if type(value) is list:
-                self._outputAttributes[attribute] = value[0]
+                self._outputAttributes[attribute] = value[attrIndex]
             else:
                 self._outputAttributes[attribute] = value
 
