@@ -35,6 +35,14 @@ class CapsuleRoute:
         self._rotationalLabels      : list           = ["Rotation"] # Per Axis
 
 
+    def haveSameParent(self, capsules : list):
+        # capsules  # List of Capsules
+        for caps in capsules:
+            if caps not in self._fromCapsules:
+                return False
+
+        return True        
+
     def addObservations(self, observation : Observation):
         self._memory.addObservations(observation)
 

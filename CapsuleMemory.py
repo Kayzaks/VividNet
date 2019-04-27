@@ -150,20 +150,21 @@ class CapsuleMemory:
             
             idx = capsIdx[currentCaps]
 
-            # Apply Symmetries
-            inputs[rotAttr][idx] = (inputs[rotAttr][idx] + deltaRotate) # % symmetries[currentCaps]
-
             # Move to Origin
             inputs[xAttr][idx] = inputs[xAttr][idx] - centerX
             inputs[yAttr][idx] = inputs[yAttr][idx] - centerY
 
             # Apply Rotations To Coordinates
+            inputs[rotAttr][idx] = (inputs[rotAttr][idx] + deltaRotate) # % symmetries[currentCaps]
             newX = inputs[xAttr][idx] * math.cos(deltaRotate * math.pi * 2.0) - inputs[yAttr][idx] * math.sin(deltaRotate * math.pi * 2.0)
             newY = inputs[xAttr][idx] * math.sin(deltaRotate * math.pi * 2.0) + inputs[yAttr][idx] * math.cos(deltaRotate * math.pi * 2.0)
 
-            # TODO: Change Size
+            # Apply Size
+            newX = newX * (1 + (deltaSize / inputs[sizeAttr][idx]))
+            newY = newY * (1 + (deltaSize / inputs[sizeAttr][idx]))
+            inputs[sizeAttr][idx] = (inputs[sizeAttr][idx] + deltaSize)
 
-            # Move away from Origin and translate
+            # Move away back from Origin and translate
             inputs[xAttr][idx] = newX + centerX + deltaX
             inputs[yAttr][idx] = newY + centerY + deltaY
 

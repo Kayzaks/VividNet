@@ -27,6 +27,13 @@ class Observation:
                 self._outputAttributes[attribute] = value
 
 
+    def isParent(self, observation : Observation):
+        for obs in self._inputObservations:
+            if obs == observation:
+                return True
+        return False
+
+
     def getOutputs(self, onlyInheritable : bool = False):
         if onlyInheritable is False:
             return self._outputAttributes    # Attribute - Value

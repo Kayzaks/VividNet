@@ -68,6 +68,14 @@ class Capsule:
         newRoute.createSemanticRoute(fromObservations)
 
 
+    def haveSameParent(self, capsules : list):
+        # capsules  # List of Capsules
+        for route in self._routes:
+            if route.haveSameParent(capsules) is True:
+                return True
+
+        return False
+
     
     def getPixelLayerInput(self):
         # Not Pretty...
@@ -255,11 +263,85 @@ class Capsule:
 
                 # 4. repeat for all routes
 
-            # TODO:
             # 5. Find most likely route
-            if probabilities[self._routes[0]] > self._routes[0].getProbabilityCutOff():
-                self.addObservations(self._routes[0], [Observation(self, self._routes[0], list(inputObservations[self._routes[0]].values()), outputAttributes[self._routes[0]], probabilities[self._routes[0]])])
+            maxRouteProbability = 0.0
+            maxRoute = self._routes[0]
+            for route in self._routes:
+                if probabilities[route] > maxRouteProbability:
+                    maxRoute = route
+                    maxRouteProbability = probabilities[route]
 
+            if probabilities[maxRoute] > maxRoute.getProbabilityCutOff():
+                self.addObservations(maxRoute, [Observation(self, maxRoute, list(inputObservations[maxRoute].values()), outputAttributes[maxRoute], probabilities[maxRoute])])
+
+
+    def getMaxAgreement(self, observations : dict):
+        # observation   # {Capsule, List of Observations}
+
+        # Create all Input Capsule Permutations
+        maxNumCaps, allInputCaps = self.getAllInputs()
+        permCapsList = [(None, -1)] * (maxNumCaps - 1)
+        for capsule in allInputCaps.keys():
+            for checkCapsule in observations:
+                for index in range(len(observations[checkCapsule])):
+                    permCapsList.append((capsule, index))
+
+
+        maxProbability = 0.0
+        maxAgreement = {}
+
+        for permutation in itertools.permutations(permCapsList, maxNumCaps):
+            inputObservations = {}      # Route - Observation
+            outputAttributes = {}       # Route - {Attribute, Value}
+            probabilities = {}          # Route - Probability
+            agreement = {}              # Route - Agreement
+            for route in self._routes: 
+                # Zero out capsules that are not part of this route
+                # TODO: The following still produces a ton of duplicates (Due to the None's, etc..)
+                #       This is "okay" as they get deleted later anyways, but an elegant
+                #       way is needed to reduce these to improve performance.
+                actualPermutation = []
+                for index, capsule in enumerate(route.getFromCapsules()):
+                    if permutation[index][0] == capsule:
+                        actualPermutation.append(permutation[index][1])
+                    else:
+                        actualPermutation.append(-1)
+
+                inputObservations[route] = {}   # Capsule - List of Observations
+                inputs = {}                     # Attribute - List of Values
+                for index, capsule in enumerate(route.getFromCapsules()):
+                    if capsule in inputObservations[route]:
+                        if actualPermutation[index] >= 0:
+                            inputObservations[route][capsule].append(observations[capsule][actualPermutation[index]])
+                    else:                        
+                        if actualPermutation[index] >= 0:
+                            inputObservations[route][capsule] = [observations[capsule][actualPermutation[index]]]
+
+                    for attr, val in inputObservations[route][capsule][-1].getOutputs(route.isSemantic()).items():
+                        if attr in inputs:
+                            inputs[attr].append(val)
+                        else:
+                            inputs[attr] = [val]
+
+                # Routing by Agreement
+                # 1. Run gamma                      
+                outputAttributes[route] = route.runGammaFunction(inputs, False)         # Attribute - List of Values
+
+                # 2. Run g
+                expectedInputs = route.runGFunction(outputAttributes[route], False)     # Attribute - List of Values
+
+                # 3. Calculate activation probability
+                agreement[route] = route.agreementFunction(inputs, expectedInputs)
+                probabilities[route] = self.calculateRouteProbability(agreement[route], inputObservations[route])
+
+                # 4. repeat for all routes
+
+            for route in self._routes:
+                if probabilities[route] > maxProbability:
+                    maxProbability = probabilities[route]
+                    maxAgreement = agreement[route]
+
+        return maxProbability, maxAgreement         # Probability, {Attribute - List of Values}
 
 
     def backwardPass(self, observation : Observation, withBackground : bool):
@@ -270,23 +352,8 @@ class Capsule:
             # If no route is specified, we just take the first
             takenRoute = self._routes[0]
 
-        #if self.getName() == "Rocket":
-        #    print("XXXXXXXXXX ONE RUN")
-        #    for attr, vallist in observation.getOutputsList().items():
-        #        print(attr.getName())
-        #        print(vallist)
-
         outputs = takenRoute.runGFunction(observation.getOutputsList(), isTraining = withBackground)    # Attribute - List of Values
         capsAttrValues = takenRoute.pairInputCapsuleAttributes(outputs)                                 # Capsule - {Attribute - List of Values}
-
-
-        #if self.getName() == "Rocket":
-        #    print("X RUN")
-        #    for attr, vallist in outputs.items():
-        #        print(attr.getName())
-        #        print(vallist)
-
-
 
         obsList = {}
         for capsule, attrValues in capsAttrValues.items():

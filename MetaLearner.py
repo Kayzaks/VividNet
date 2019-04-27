@@ -9,11 +9,12 @@ class MetaLearner:
 
 
     def addLambda(self, featureLambda):
-        # featureLambda  # Input: {Capsule, List of Observations}  # Output : Boolean
+        # featureLambda  # Input  : {Capsule, List of Observations}, {Observed Axioms (Capsule), List of Observations}
+        #                # Output : Boolean
         self._decisionMatrix[featureLambda] = np.array([0, 0, 0, 0])
 
 
-    def checkResults(self, observations : list):
+    def checkResults(self, observations : dict, observedAxioms : dict):
         totalDecision = np.array([0, 0, 0, 0])
         self._lastFeatures = []
 

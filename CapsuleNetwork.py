@@ -23,8 +23,46 @@ class CapsuleNetwork:
         self._renderer                           = None             # PrimitivesRenderer Instance
         self._metaLearner        : MetaLearner   = MetaLearner()
 
-        # Adding all Meta Learner Lambdas 
-        self._metaLearner.addLambda(())
+        # Adding all Meta Learner Lambdas:
+        # 1. Observed Axioms have same $\Omega$ as parent
+        self._metaLearner.addLambda(lambda obs, axioms : len(self.findSameParents(list(axioms.keys()))) > 0)
+        # 2. Observed Axioms don't have same $\Omega$ as parent
+        self._metaLearner.addLambda(lambda obs, axioms : len(self.findSameParents(list(axioms.keys()))) == 0)
+        # 3. Parts tracked from previous scenes
+        # TODO
+        # 4. $\Omega: Z(\vec{\alpha}, \vec{\tilde{\alpha}})$ indicates one attribute mismatch \\ with no entry in memory $\alpha^i >\epsilon$
+        # TODO: self._metaLearner.addLambda(lambda obs, axioms : self.agreementOfMostLikelyParent(axioms))
+        # 5. $\Omega: Z(\vec{\alpha}, \vec{\tilde{\alpha}})$ indicates attribute mismatch \\ for (position, rotation, size) only
+
+
+    def agreementOfMostLikelyParent(self, observedAxioms : dict):
+        # observedAxioms    # {Observed Axiom (capsule), List of Observations}
+        potentialParents = self.findSameParents(list(observedAxioms.keys()))
+
+        maxProbability = 0.0
+        maxAgreement = {}
+        maxParent = None
+        for parent in potentialParents:
+            currentProbability, currentAgreement = parent.getMaxAgreement(observedAxioms)
+            if currentProbability > maxProbability:
+                maxParent = parent
+                maxProbability = currentProbability
+                maxAgreement = currentAgreement
+
+        return maxAgreement
+
+
+    def findSameParents(self, capsules : list):
+        # capsules  # List of Capsules
+        sameParents = []
+
+        for caps in self._semanticCapsules:
+            if caps not in capsules:
+                if caps.haveSameParent(capsules) is True:
+                    sameParents.append(caps)
+        
+        return sameParents
+
 
     def getShapeByPixelCapsule(self, capsule : Capsule):
         for shape, pixelCaps in self._pixelCapsules.items():
@@ -103,22 +141,39 @@ class CapsuleNetwork:
         for capsule in self._semanticCapsules:
             capsule.clearObservations()
             
+
+    def findObservedAxioms(self, observations : dict):
+        # observations      # {Capsule, List of Observations}
+
+        observedAxioms = {}
+
+        # Not the fastest check, but works...
+        for caps, obsList in observations.items():
+            for obs in obsList:
+                foundParent = False
+                for checkObs in [x for checkObsList in observations.items() for x in checkObsList] :
+                    if checkObs.isParent(obs):
+                        foundParent = True
+                        break
+                if foundParent is False:
+                    if caps in observedAxioms:
+                        observedAxioms[caps].append(obs) 
+                    else:
+                        observedAxioms[caps] = [obs] 
+
+        return observedAxioms # {Observed Axioms (Capsule), List of Observations}
+
     
     def showInput(self, image : list, width : int, height : int, stepSize : int = 1):
         # image             # Linear List of Pixels
+
+        startTime = time.time()
         self.clearAllObservations()
 
         print("Capsule Network shown an Image of size (" + str(width) + ", " + str(height) + ")")
 
         offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize = self._renderer.getOffsetLabels()
         
-
-
-
-        startTime = time.time()
-
-
-
         for filterShape, capsule in self._pixelCapsules.items():
             if filterShape[0] <= width and filterShape[1] <= height:
 
@@ -147,44 +202,30 @@ class CapsuleNetwork:
                         pixelObs = Observation(capsule, None, [], attributes, 1.0)
                         capsule.addPixelObservation(pixelObs)
 
-        print("Forward Pass on all Primitive Capsules")
+        passedTime = time.time() - startTime
+        print("Forward Pass on all Primitive Capsules (Time Passed: " + str(passedTime) + "s)")
 
         allObs = {}     # Capsule - List Of Observations
-
-
-
-        print("Time 1 - " + str(time.time() - startTime))
-        startTime = time.time()
-
-
-
-
 
         for capsule in self._primitiveCapsules:
             capsule.forwardPass()
             capsule.cleanupObservations(offsetLabelX, offsetLabelY, offsetLabelRatio, targetLabelX, targetLabelY, targetLabelSize)
             allObs[capsule] = capsule.getObservations()
 
-
-
-
-        print("Time 2 - " + str(time.time() - startTime))
-        startTime = time.time()
-
-
-
         for layer in range(self._numSemanticLayers):
-            print("Forward Pass on Layer " + str(layer) + " of Semantic Capsules")
+            passedTime = time.time() - startTime
+            print("Forward Pass on Layer " + str(layer) + " of Semantic Capsules (Time Passed: " + str(passedTime) + "s)")
             for capsule in self._semanticLayers[layer]:
                 capsule.forwardPass()
                 capsule.cleanupObservations()
                 allObs[capsule] = capsule.getObservations()
 
+        observedAxioms = self.findObservedAxioms(allObs)
+        if len(observedAxioms) > 0:
+            self._metaLearner.checkResults(allObs, observedAxioms)
 
-        print("Time 3 - " + str(time.time() - startTime))
-
-
-        self._metaLearner.checkResults(allObs)
+        passedTime = time.time() - startTime
+        print("Total Time Passed: " + str(passedTime) + "s")
 
         return allObs   # Capsule - List Of Observations
 
