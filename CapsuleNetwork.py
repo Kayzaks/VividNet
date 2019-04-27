@@ -2,6 +2,7 @@ from AttributePool import AttributePool
 from Capsule import Capsule
 from PrimitivesRenderer import Primitives
 from Observation import Observation
+from MetaLearner import MetaLearner
 
 import copy
 import math
@@ -20,7 +21,10 @@ class CapsuleNetwork:
         self._numSemanticLayers  : int           = 0                
         self._attributePool      : AttributePool = AttributePool()
         self._renderer                           = None             # PrimitivesRenderer Instance
+        self._metaLearner        : MetaLearner   = MetaLearner()
 
+        # Adding all Meta Learner Lambdas 
+        self._metaLearner.addLambda(())
 
     def getShapeByPixelCapsule(self, capsule : Capsule):
         for shape, pixelCaps in self._pixelCapsules.items():
@@ -180,7 +184,14 @@ class CapsuleNetwork:
         print("Time 3 - " + str(time.time() - startTime))
 
 
+        self._metaLearner.checkResults(allObs)
+
         return allObs   # Capsule - List Of Observations
+
+
+    def applyOracle(self, oracleDecision : int):
+        # TODO: Apply oracle decisions here?
+        self._metaLearner.applyOracle(oracleDecision)
 
         
     def generateImage(self, width : int, height : int, observations : dict, withBackground : bool = False):
