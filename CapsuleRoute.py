@@ -316,7 +316,7 @@ class CapsuleRoute:
                     agreementSum += sum(valueList)
                     totLen += len(valueList)
             agreementSum = agreementSum / totLen
-            print(agreementSum)
+            
             # TODO: This is only for 1 Axis! 
             if agreementSum > HyperParameters.SymmetryCutOff:
                 # Yes, we do have a Symmetry! Can we go deeper?
@@ -328,7 +328,7 @@ class CapsuleRoute:
                 break
             else:
                 n = n + 1
-        print((1 / max(1, highestAgreementN)))
+                
         return (1 / max(1, highestAgreementN))
 
 

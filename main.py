@@ -1,4 +1,8 @@
 
+from TestPrimitives import TestPrimitives
+from TestPrimitives import TestRenderer
+from CapsuleNetwork import CapsuleNetwork
+from Observation import Observation
 from AttributePool import AttributePool
 from Capsule import Capsule
 from GraphicsUserInterface import GraphicsUserInterface
@@ -9,12 +13,9 @@ import numpy as np
 import random
 import math
 
-from TestPrimitives import TestPrimitives
-from TestPrimitives import TestRenderer
-from CapsuleNetwork import CapsuleNetwork
-from Observation import Observation
-
-
+# We restrict our GPU to only use 50%. This has no specific 
+# reason, just to allow us to work in the background without
+# CUDA running out of Memory
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 config = tf.ConfigProto()
@@ -28,252 +29,148 @@ if __name__ == '__main__':
     capsNet = CapsuleNetwork()
     capsNet.setRenderer(TestRenderer)
 
-    width = 28
-    height = 28
+    width = 28                  # Width of the Primitive Capsule Input
+    height = 28                 # Height of the Primitive Capsule Input
+    shape = (84, 84)            # Total Size of the Image
     
-    squareCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Square, [(width, height)])
-    circleCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Circle, [(width, height)])   
-    triangleCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Triangle, [(width, height)])   
+    # Set-up of Primitive Capsules
+    squareCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Square, [(width, height)], 0) #, 1)
+    circleCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Circle, [(width, height)], 0) #, 1) 
+    triangleCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Triangle, [(width, height)], 0) #, 1) 
 
-    attr = { circleCapsule.getAttributeByName("Position-X") : 0.5 + 0.03 * 0.7 * math.sin(0.125 * math.pi * 2.0),
-                circleCapsule.getAttributeByName("Position-Y") :       0.5 - 0.03 * 0.7 * math.cos(0.125 * math.pi * 2.0),
-                circleCapsule.getAttributeByName("Size") : 0.20 * 0.7,
+
+    # ----------------------------------------------------------------------- #
+    # Training Data for a Spaceship
+    #
+    # Alternatively, we can:
+    #  1. Draw an image of the Spaceship and feed it to the Capsule Network
+    #  2. Identify Primitives for Rocket/Booster/Shuttle/etc... and Train
+    #  3. Restart and rotate/resize/translate the learned spaceship
+    #
+    # We choose the following as its quicker to test, by directly 
+    # writing down some Primitives
+
+    spsize = 0.7                # Size of the Spaceship in relation to the Screen
+    attr = { circleCapsule.getAttributeByName("Position-X") :    0.5 + 0.03 * spsize * math.sin(0.125 * math.pi * 2.0),
+                circleCapsule.getAttributeByName("Position-Y") : 0.5 - 0.03 * spsize * math.cos(0.125 * math.pi * 2.0),
+                circleCapsule.getAttributeByName("Size") : 0.20 * spsize,
                 circleCapsule.getAttributeByName("Rotation") : 0.125,
                 circleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
                 circleCapsule.getAttributeByName("Intensity") : 0.8,
-                circleCapsule.getAttributeByName("Strength") : 0.1 * 0.7 }
+                circleCapsule.getAttributeByName("Strength") : 0.1 * spsize }
     
     circObs = Observation(circleCapsule, circleCapsule._routes[0], [], attr, 1.0 )
 
-    attr = { squareCapsule.getAttributeByName("Position-X") : 0.5 - 0.25 * 0.7 * math.sin(0.125 * math.pi * 2.0),
-                squareCapsule.getAttributeByName("Position-Y") :       0.5 + 0.25 * 0.7 * math.cos(0.125 * math.pi * 2.0),
-                squareCapsule.getAttributeByName("Size") : 0.25 * 0.7,
+    attr = { squareCapsule.getAttributeByName("Position-X") : 0.5 - 0.25 * spsize * math.sin(0.125 * math.pi * 2.0),
+                squareCapsule.getAttributeByName("Position-Y") :       0.5 + 0.25 * spsize * math.cos(0.125 * math.pi * 2.0),
+                squareCapsule.getAttributeByName("Size") : 0.25 * spsize,
                 squareCapsule.getAttributeByName("Rotation") : 0.125,
                 squareCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
                 squareCapsule.getAttributeByName("Intensity") : 0.6,
-                squareCapsule.getAttributeByName("Strength") : 0.1 * 0.7 }
+                squareCapsule.getAttributeByName("Strength") : 0.1 * spsize }
     
     sqObs = Observation(squareCapsule, squareCapsule._routes[0], [], attr, 1.0 )
             
-    attr = { triangleCapsule.getAttributeByName("Position-X") : 0.5 + 0.0 * 0.7 * math.cos(0.125 * math.pi * 2.0) + 0.25 * 0.7 * math.sin(0.125 * math.pi * 2.0),
-                triangleCapsule.getAttributeByName("Position-Y") :       0.5 + 0.0 * 0.7 * math.sin(0.125 * math.pi * 2.0) - 0.25 * 0.7 * math.cos(0.125 * math.pi * 2.0),
-                triangleCapsule.getAttributeByName("Size") : 0.15 * 0.7,
+    attr = { triangleCapsule.getAttributeByName("Position-X") :    0.5 + 0.0 * spsize * math.cos(0.125 * math.pi * 2.0) + 0.25 * spsize * math.sin(0.125 * math.pi * 2.0),
+                triangleCapsule.getAttributeByName("Position-Y") : 0.5 + 0.0 * spsize * math.sin(0.125 * math.pi * 2.0) - 0.25 * spsize * math.cos(0.125 * math.pi * 2.0),
+                triangleCapsule.getAttributeByName("Size") : 0.15 * spsize,
                 triangleCapsule.getAttributeByName("Rotation") : 0.125,
                 triangleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
                 triangleCapsule.getAttributeByName("Intensity") : 0.1,
-                triangleCapsule.getAttributeByName("Strength") : 0.4 * 0.7 }
+                triangleCapsule.getAttributeByName("Strength") : 0.4 * spsize }
     
     fin1Obs = Observation(triangleCapsule, triangleCapsule._routes[0], [], attr, 1.0 )
 
-    attr = { triangleCapsule.getAttributeByName("Position-X") : 0.5 - 0.25 * 0.7 * math.cos(0.125 * math.pi * 2.0) - 0.25 * 0.7 * math.sin(0.125 * math.pi * 2.0),
-                triangleCapsule.getAttributeByName("Position-Y") :       0.5 - 0.25 * 0.7 * math.sin(0.125 * math.pi * 2.0) + 0.25 * 0.7 * math.cos(0.125 * math.pi * 2.0),
-                triangleCapsule.getAttributeByName("Size") : 0.25 * 0.6 * 0.7,
+    attr = { triangleCapsule.getAttributeByName("Position-X") : 0.5 - 0.25 * spsize * math.cos(0.125 * math.pi * 2.0) - 0.25 * spsize * math.sin(0.125 * math.pi * 2.0),
+                triangleCapsule.getAttributeByName("Position-Y") :       0.5 - 0.25 * spsize * math.sin(0.125 * math.pi * 2.0) + 0.25 * spsize * math.cos(0.125 * math.pi * 2.0),
+                triangleCapsule.getAttributeByName("Size") : 0.25 * 0.6 * spsize,
                 triangleCapsule.getAttributeByName("Rotation") : 0.125 + 1.0 / 12.0,
                 triangleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
                 triangleCapsule.getAttributeByName("Intensity") : 0.1,
-                triangleCapsule.getAttributeByName("Strength") : 0.4 * 0.7 }
+                triangleCapsule.getAttributeByName("Strength") : 0.4 * spsize }
     
     fin2Obs = Observation(triangleCapsule, triangleCapsule._routes[0], [], attr, 1.0 )
 
-    attr = { triangleCapsule.getAttributeByName("Position-X") : 0.5 + 0.25 * 0.7 * math.cos(0.125 * math.pi * 2.0) - 0.25 * 0.7 * math.sin(0.125 * math.pi * 2.0),
-                triangleCapsule.getAttributeByName("Position-Y") :       0.5 + 0.25 * 0.7 * math.sin(0.125 * math.pi * 2.0) + 0.25 * 0.7 * math.cos(0.125 * math.pi * 2.0),
-                triangleCapsule.getAttributeByName("Size") : 0.25 * 0.6 * 0.7,
+    attr = { triangleCapsule.getAttributeByName("Position-X") : 0.5 + 0.25 * spsize * math.cos(0.125 * math.pi * 2.0) - 0.25 * spsize * math.sin(0.125 * math.pi * 2.0),
+                triangleCapsule.getAttributeByName("Position-Y") :       0.5 + 0.25 * spsize * math.sin(0.125 * math.pi * 2.0) + 0.25 * spsize * math.cos(0.125 * math.pi * 2.0),
+                triangleCapsule.getAttributeByName("Size") : 0.25 * 0.6 * spsize,
                 triangleCapsule.getAttributeByName("Rotation") : (0.125 + 1.0 / 12.0 + 1.0 / 6.0) % 0.33333333,
                 triangleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
                 triangleCapsule.getAttributeByName("Intensity") : 0.1,
-                triangleCapsule.getAttributeByName("Strength") : 0.4 * 0.7 }
+                triangleCapsule.getAttributeByName("Strength") : 0.4 * spsize }
     
     fin3Obs = Observation(triangleCapsule, triangleCapsule._routes[0], [], attr, 1.0 )
 
-
-    rocketCapsule = capsNet.addSemanticCapsule("Rocket", [sqObs, fin2Obs, fin3Obs])  
-    shuttleCapsule = capsNet.addSemanticCapsule("Shuttle", [circObs, fin1Obs])  
-
-
-    attr = { circleCapsule.getAttributeByName("Position-X") : 0.5,
-                circleCapsule.getAttributeByName("Position-Y") :       0.5,
-                circleCapsule.getAttributeByName("Size") : 0.4 * 0.7,
-                circleCapsule.getAttributeByName("Rotation") : 0.7,
-                circleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
-                circleCapsule.getAttributeByName("Intensity") : 0.8,
-                circleCapsule.getAttributeByName("Strength") : 0.1 * 0.7 }
-                
-    asteroidShape = Observation(circleCapsule, circleCapsule._routes[0], [], attr, 1.0 )
-
-    attr = { circleCapsule.getAttributeByName("Position-X") : 0.5 - 0.02,
-                circleCapsule.getAttributeByName("Position-Y") :       0.5 - 0.05,
-                circleCapsule.getAttributeByName("Size") : 0.05 * 0.7,
-                circleCapsule.getAttributeByName("Rotation") : 0.7,
-                circleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
-                circleCapsule.getAttributeByName("Intensity") : 0.3,
-                circleCapsule.getAttributeByName("Strength") : 0.01 * 0.7 }
-
-    crater1 = Observation(circleCapsule, circleCapsule._routes[0], [], attr, 1.0 )
-
-    attr = {  circleCapsule.getAttributeByName("Position-X") : 0.5 + 0.07,
-                circleCapsule.getAttributeByName("Position-Y") :       0.5 + 0.03,
-                circleCapsule.getAttributeByName("Size") : 0.1 * 0.7,
-                circleCapsule.getAttributeByName("Rotation") : 0.7,
-                circleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
-                circleCapsule.getAttributeByName("Intensity") : 0.3,
-                circleCapsule.getAttributeByName("Strength") : 0.01 * 0.7 }
-    
-    crater2 = Observation(circleCapsule, circleCapsule._routes[0], [], attr, 1.0 )
+    # Train Semantic Capsules
+    rocketCapsule = capsNet.addSemanticCapsule("Rocket", [sqObs, fin2Obs, fin3Obs], 0) #, 1) 
+    shuttleCapsule = capsNet.addSemanticCapsule("Shuttle", [circObs, fin1Obs], 0) #, 1)     
+    # ----------------------------------------------------------------------- #
 
 
-    asteroidCapsule = capsNet.addSemanticCapsule("Asteroid", [asteroidShape, crater1, crater2])  
-
-
+    # UI Button Function
     def addNewSemanticCapsule(name : str, observationList : list):
         print("Training new Capsule '" + name + "' from:")
         for obs in observationList:
             obs.printOutputs(True)
 
         newCaps = capsNet.addSemanticCapsule(name, observationList)
-      
-    #for i in range(1):
-    #    print("---------------- ROUND " + str(i) + "---------------")
-    #    rocketCapsule.continueTraining(True, [0])
-    #    shuttleCapsule.continueTraining(True, [0])
-    #    asteroidCapsule.continueTraining(True, [0])
+        
 
 
-    for i in range(10):
-        rotation = 0.025 + 0.1 * float(i) #0.025 + 0.05 * float(i)
+    for i in range(5):
+        
+        # ----------------------------------------------------------------------- #
+        # Test Image Generation
+        # 
+        # Alternatively we can load Images
+        rotation = 0.1 * float(i) 
 
-        allObs = {circleCapsule : [], squareCapsule : [], triangleCapsule : [], rocketCapsule : [], shuttleCapsule : [], asteroidCapsule : []}
+        allObs = {circleCapsule : [], squareCapsule : [], triangleCapsule : [], rocketCapsule : [], shuttleCapsule : []}
         
         obsDicts = []
         
-        #shape = (56 , 56)
-        #spsize = 0.9
-        shape = (56 + 28, 56 + 28)
-        spsize = 0.7
-
-
-        obsDicts.append({ circleCapsule.getAttributeByName("Position-X") : 0.5,
-                    circleCapsule.getAttributeByName("Position-Y") :       0.5,
-                    circleCapsule.getAttributeByName("Size") : 0.4 * spsize,
-                    circleCapsule.getAttributeByName("Rotation") : rotation,
-                    circleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
-                    circleCapsule.getAttributeByName("Intensity") : 0.8,
-                    circleCapsule.getAttributeByName("Strength") : 0.1 * spsize })
-
-        obsDicts.append({ circleCapsule.getAttributeByName("Position-X") : 0.5 - 0.02,
-                    circleCapsule.getAttributeByName("Position-Y") :       0.5 + 0.05,
-                    circleCapsule.getAttributeByName("Size") : 0.05 * spsize,
-                    circleCapsule.getAttributeByName("Rotation") : rotation,
-                    circleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
-                    circleCapsule.getAttributeByName("Intensity") : 0.3,
-                    circleCapsule.getAttributeByName("Strength") : 0.01 * spsize })
-
-        obsDicts.append({ circleCapsule.getAttributeByName("Position-X") : 0.5 + 0.07,
-                    circleCapsule.getAttributeByName("Position-Y") :       0.5 - 0.03,
-                    circleCapsule.getAttributeByName("Size") : 0.1 * spsize,
-                    circleCapsule.getAttributeByName("Rotation") : rotation,
-                    circleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
-                    circleCapsule.getAttributeByName("Intensity") : 0.3,
-                    circleCapsule.getAttributeByName("Strength") : 0.01 * spsize })
+        obsDicts.append({ shuttleCapsule.getAttributeByName("Position-X") :  0.5 + 0.2 * spsize * math.sin(rotation * math.pi * 2.0),
+                    shuttleCapsule.getAttributeByName("Position-Y") :        0.5 - 0.2 * spsize * math.cos(rotation * math.pi * 2.0),
+                    shuttleCapsule.getAttributeByName("Size") : 0.1 ,
+                    shuttleCapsule.getAttributeByName("Rotation") : rotation,
+                    shuttleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
+                    shuttleCapsule.getAttributeByName("Intensity") : 0.266,
+                    shuttleCapsule.getAttributeByName("Strength") : 0.3 * spsize })
         
         for obs in obsDicts:
-            allObs[circleCapsule].append(Observation(circleCapsule, circleCapsule._routes[0], [], obs, 1.0 ))
+            allObs[shuttleCapsule].append(Observation(shuttleCapsule, shuttleCapsule._routes[0], [], obs, 1.0 ))
 
-
-        #obsDicts.append({ shuttleCapsule.getAttributeByName("Position-X") : 0.5,
-        #            shuttleCapsule.getAttributeByName("Position-Y") :       0.5,
-        #            shuttleCapsule.getAttributeByName("Size") : 0.128 ,
-        #            shuttleCapsule.getAttributeByName("Rotation") : rotation,
-        #            shuttleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
-        #            shuttleCapsule.getAttributeByName("Intensity") : 0.266,
-        #            shuttleCapsule.getAttributeByName("Strength") : 0.3 * spsize })
-        #
-        #for obs in obsDicts:
-        #    allObs[shuttleCapsule].append(Observation(shuttleCapsule, shuttleCapsule._routes[0], [], obs, 1.0 ))
-
-
-        #obsDicts.append({ asteroidCapsule.getAttributeByName("Position-X") : 0.25,
-        #            asteroidCapsule.getAttributeByName("Position-Y") :       0.25,
-        #            asteroidCapsule.getAttributeByName("Size") : 0.128 ,
-        #            asteroidCapsule.getAttributeByName("Rotation") : rotation,
-        #            asteroidCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
-        #            asteroidCapsule.getAttributeByName("Intensity") : 0.266,
-        #            asteroidCapsule.getAttributeByName("Strength") : 0.3 * spsize })
-        #
-        #for obs in obsDicts:
-        #    allObs[asteroidCapsule].append(Observation(asteroidCapsule, asteroidCapsule._routes[0], [], obs, 1.0 ))
-
-#        obsDicts.append({ circleCapsule.getAttributeByName("Position-X") : 0.5 + 0.03 * spsize * math.sin(rotation * math.pi * 2.0),
-#                    circleCapsule.getAttributeByName("Position-Y") :       0.5 - 0.03 * spsize * math.cos(rotation * math.pi * 2.0),
-#                    circleCapsule.getAttributeByName("Size") : 0.20 * spsize,
-#                    circleCapsule.getAttributeByName("Rotation") : rotation,
-#                    circleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
-#                    circleCapsule.getAttributeByName("Intensity") : 0.8,
-#                    circleCapsule.getAttributeByName("Strength") : 0.1 * spsize })
-#        
-#        for obs in obsDicts:
-#            allObs[circleCapsule].append(Observation(circleCapsule, circleCapsule._routes[0], [], obs, 1.0 ))
-#
-#        obsDicts = []
-#
-#        obsDicts.append({ squareCapsule.getAttributeByName("Position-X") : 0.5 - 0.25 * spsize * math.sin(rotation * math.pi * 2.0),
-#                    squareCapsule.getAttributeByName("Position-Y") :       0.5 + 0.25 * spsize * math.cos(rotation * math.pi * 2.0),
-#                    squareCapsule.getAttributeByName("Size") : 0.25 * spsize,
-#                    squareCapsule.getAttributeByName("Rotation") : rotation,
-#                    squareCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
-#                    squareCapsule.getAttributeByName("Intensity") : 0.6,
-#                    squareCapsule.getAttributeByName("Strength") : 0.1 * spsize })
-#                    
-#        for obs in obsDicts:
-#            allObs[squareCapsule].append(Observation(squareCapsule, squareCapsule._routes[0], [], obs, 1.0 ))
-#
-#        obsDicts = []
-#
-#        obsDicts.append({ triangleCapsule.getAttributeByName("Position-X") : 0.5 + 0.0 * spsize * math.cos(rotation * math.pi * 2.0) + 0.25 * spsize * math.sin(rotation * math.pi * 2.0),
-#                    triangleCapsule.getAttributeByName("Position-Y") :       0.5 + 0.0 * spsize * math.sin(rotation * math.pi * 2.0) - 0.25 * spsize * math.cos(rotation * math.pi * 2.0),
-#                    triangleCapsule.getAttributeByName("Size") : 0.15 * spsize,
-#                    triangleCapsule.getAttributeByName("Rotation") : rotation,
-#                    triangleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
-#                    triangleCapsule.getAttributeByName("Intensity") : 0.1,
-#                    triangleCapsule.getAttributeByName("Strength") : 0.4 * spsize })
-#
-#        # Left Fin
-#        obsDicts.append({ triangleCapsule.getAttributeByName("Position-X") : 0.5 - 0.25 * spsize * math.cos(rotation * math.pi * 2.0) - 0.25 * spsize * math.sin(rotation * math.pi * 2.0),
-#                    triangleCapsule.getAttributeByName("Position-Y") :       0.5 - 0.25 * spsize * math.sin(rotation * math.pi * 2.0) + 0.25 * spsize * math.cos(rotation * math.pi * 2.0),
-#                    triangleCapsule.getAttributeByName("Size") : 0.25 * 0.6 * spsize,
-#                    triangleCapsule.getAttributeByName("Rotation") : rotation + 1.0 / 12.0,
-#                    triangleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
-#                    triangleCapsule.getAttributeByName("Intensity") : 0.1,
-#                    triangleCapsule.getAttributeByName("Strength") : 0.4 * spsize })
-#
-#        # Right Fin
-#        obsDicts.append({ triangleCapsule.getAttributeByName("Position-X") : 0.5 + 0.25 * spsize * math.cos(rotation * math.pi * 2.0) - 0.25 * spsize * math.sin(rotation * math.pi * 2.0),
-#                    triangleCapsule.getAttributeByName("Position-Y") :       0.5 + 0.25 * spsize * math.sin(rotation * math.pi * 2.0) + 0.25 * spsize * math.cos(rotation * math.pi * 2.0),
-#                    triangleCapsule.getAttributeByName("Size") : 0.25 * 0.6 * spsize,
-#                    triangleCapsule.getAttributeByName("Rotation") : (rotation + 1.0 / 12.0 + 1.0 / 6.0) % 0.33333333,
-#                    triangleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
-#                    triangleCapsule.getAttributeByName("Intensity") : 0.1,
-#                    triangleCapsule.getAttributeByName("Strength") : 0.4 * spsize })
-#                    
-#        for obs in obsDicts:
-#            allObs[triangleCapsule].append(Observation(triangleCapsule, triangleCapsule._routes[0], [], obs, 1.0 ))
-
-
-        imageReal, semantics, texts = capsNet.generateImage(shape[0], shape[0], allObs, False)
-        #allObs = capsNet.showInput(imageReal, shape[0], shape[1], 1)
-        #imageObserved, semantics, texts = capsNet.generateImage(shape[0], shape[1], allObs, False)
-        #for capsule in allObs.keys():
-        #    print(str(len(allObs[capsule])) + "x " + capsule.getName())
-        #    for index, obs in enumerate(allObs[capsule]):
-        #        print("Observation " + str(index))
-        #        obs.printOutputs(False)
-
-
-
-
-        imageObserved = imageReal
-        for obs in semantics.keys():
-            obs.printOutputs(False)
+        obsDicts = []
+        obsDicts.append({ rocketCapsule.getAttributeByName("Position-X") : 0.5 - 0.25 * spsize * math.sin(rotation * math.pi * 2.0),
+                    rocketCapsule.getAttributeByName("Position-Y") :       0.5 + 0.25 * spsize * math.cos(rotation * math.pi * 2.0),
+                    rocketCapsule.getAttributeByName("Size") : 0.128 ,
+                    rocketCapsule.getAttributeByName("Rotation") : rotation,
+                    rocketCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
+                    rocketCapsule.getAttributeByName("Intensity") : 0.266,
+                    rocketCapsule.getAttributeByName("Strength") : 0.3 * spsize })
         
+        for obs in obsDicts:
+            allObs[rocketCapsule].append(Observation(rocketCapsule, rocketCapsule._routes[0], [], obs, 1.0 ))
+            
+        # Draw the image, but we ignore all semantics (or Alternatively, load images from a paint program)
+        imageReal, semantics, texts = capsNet.generateImage(shape[0], shape[0], allObs, False)
+        # ----------------------------------------------------------------------- #
+
+
+        # Feed-Forward Pass through the Network
+        allObs = capsNet.showInput(imageReal, shape[0], shape[1], 1)
+
+        # Draw from the detected data
+        imageObserved, semantics, texts = capsNet.generateImage(shape[0], shape[1], allObs, False)
+
+        # Print all Observations
+        for capsule in allObs.keys():
+            print(str(len(allObs[capsule])) + "x " + capsule.getName())
+            for index, obs in enumerate(allObs[capsule]):
+                print("Observation " + str(index))
+                obs.printOutputs(False)
+
+        # imageObserved = imageReal
 
         drawPixels1 = [0.0] * (shape[0] * shape[1] * 3)
         drawPixels2 = [0.0] * (shape[0] * shape[1] * 3)

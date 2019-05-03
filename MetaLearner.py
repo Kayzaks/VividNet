@@ -19,7 +19,7 @@ class MetaLearner:
         self._lastFeatures = []
 
         for featureLambda in self._decisionMatrix.keys():
-            if featureLambda(observations) is True:
+            if featureLambda(observations, observedAxioms) is True:
                 totalDecision = np.add(totalDecision, self._decisionMatrix[featureLambda])
                 self._lastFeatures.append(featureLambda)
 

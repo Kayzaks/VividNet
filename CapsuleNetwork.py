@@ -76,7 +76,7 @@ class CapsuleNetwork:
         self._renderer = rendererClass(self._attributePool)
 
 
-    def addPrimitiveCapsule(self, primitive : Primitives, filterShapes : list):
+    def addPrimitiveCapsule(self, primitive : Primitives, filterShapes : list, additionalTraining : int = 0):
         # filterShapes      # List of Tuples (width, height)
         
         if self._renderer is None:
@@ -98,10 +98,16 @@ class CapsuleNetwork:
             currentCapsule.addPrimitiveRoute(pixelCapsule, self._renderer, primitive)
         
         self._primitiveCapsules.append(currentCapsule)
+
+        if additionalTraining > 0:
+            for i in range(additionalTraining):
+                print("-------------------------------- ADDITIONAL TRAINING ROUND " + str(i + 1) + " OF " + str(additionalTraining) + " --------------------------------")
+                currentCapsule.continueTraining(True, [0])
+
         return currentCapsule
 
 
-    def addSemanticCapsule(self, name : str, fromObservations : list):
+    def addSemanticCapsule(self, name : str, fromObservations : list, additionalTraining : int = 0):
         # fromObservations          # List of Observations for one Occurance
         currentCapsule = Capsule(name)
         currentCapsule.addSemanticRoute(fromObservations, self._attributePool)
@@ -118,6 +124,12 @@ class CapsuleNetwork:
 
         self._semanticLayers[maxLayerID + 1].append(currentCapsule)
         self._semanticCapsules.append(currentCapsule)
+
+        if additionalTraining > 0:
+            for i in range(additionalTraining):
+                print("-------------------------------- ADDITIONAL TRAINING ROUND " + str(i + 1) + " OF " + str(additionalTraining) + " --------------------------------")
+                currentCapsule.continueTraining(True, [0])
+
         return currentCapsule
 
 
@@ -151,7 +163,7 @@ class CapsuleNetwork:
         for caps, obsList in observations.items():
             for obs in obsList:
                 foundParent = False
-                for checkObs in [x for checkObsList in observations.items() for x in checkObsList] :
+                for checkObs in [x for checkObsList in observations.values() for x in checkObsList] :
                     if checkObs.isParent(obs):
                         foundParent = True
                         break
@@ -203,7 +215,7 @@ class CapsuleNetwork:
                         capsule.addPixelObservation(pixelObs)
 
         passedTime = time.time() - startTime
-        print("Forward Pass on all Primitive Capsules (Time Passed: " + str(passedTime) + "s)")
+        print("Beginning Forward Pass on all Primitive Capsules (Time Passed: " + str(passedTime) + "s)")
 
         allObs = {}     # Capsule - List Of Observations
 
@@ -214,14 +226,14 @@ class CapsuleNetwork:
 
         for layer in range(self._numSemanticLayers):
             passedTime = time.time() - startTime
-            print("Forward Pass on Layer " + str(layer) + " of Semantic Capsules (Time Passed: " + str(passedTime) + "s)")
+            print("Beginning Forward Pass on Layer " + str(layer) + " of Semantic Capsules (Time Passed: " + str(passedTime) + "s)")
             for capsule in self._semanticLayers[layer]:
                 capsule.forwardPass()
                 capsule.cleanupObservations()
                 allObs[capsule] = capsule.getObservations()
 
         observedAxioms = self.findObservedAxioms(allObs)
-        if len(observedAxioms) > 0:
+        if len(observedAxioms) > 1:
             self._metaLearner.checkResults(allObs, observedAxioms)
 
         passedTime = time.time() - startTime

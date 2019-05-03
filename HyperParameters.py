@@ -12,10 +12,10 @@ class HyperParameters:
 
     # Semantic Capsule Agreement
     SemAgreementWidth = 0.0
-    SemAgreementFallOff = 0.20
+    SemAgreementFallOff = 0.40
 
     # Symmetry
-    SymmetryCutOff = 0.95
+    SymmetryCutOff = 0.99
 
     # Learning
     AdamLearningRate = 0.0001

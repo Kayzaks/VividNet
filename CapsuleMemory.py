@@ -160,9 +160,11 @@ class CapsuleMemory:
             newY = inputs[xAttr][idx] * math.sin(deltaRotate * math.pi * 2.0) + inputs[yAttr][idx] * math.cos(deltaRotate * math.pi * 2.0)
 
             # Apply Size
-            newX = newX * (1 + (deltaSize / inputs[sizeAttr][idx]))
-            newY = newY * (1 + (deltaSize / inputs[sizeAttr][idx]))
-            inputs[sizeAttr][idx] = (inputs[sizeAttr][idx] + deltaSize)
+            # TODO: Once gamma treats size as in the paper, this must be adjusted as well:
+            relSize = (1 + (deltaSize / centerS))
+            newX = newX * relSize
+            newY = newY * relSize
+            inputs[sizeAttr][idx] = inputs[sizeAttr][idx] * relSize
 
             # Move away back from Origin and translate
             inputs[xAttr][idx] = newX + centerX + deltaX

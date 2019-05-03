@@ -27,7 +27,7 @@ class Observation:
                 self._outputAttributes[attribute] = value
 
 
-    def isParent(self, observation : Observation):
+    def isParent(self, observation):
         for obs in self._inputObservations:
             if obs == observation:
                 return True
