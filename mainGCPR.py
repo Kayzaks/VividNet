@@ -117,7 +117,7 @@ if __name__ == '__main__':
         
 
 
-    for i in range(5):
+    for i in range(3):
         
         # ----------------------------------------------------------------------- #
         # Test Image Generation
@@ -153,7 +153,7 @@ if __name__ == '__main__':
             allObs[rocketCapsule].append(Observation(rocketCapsule, rocketCapsule._routes[0], [], obs, 1.0 ))
             
         # Draw the image, but we ignore all semantics (or Alternatively, load images from a paint program)
-        imageReal, semantics, texts = capsNet.generateImage(shape[0], shape[0], allObs, False)
+        imageReal, semantics, texts = capsNet.generateImage(shape[0], shape[1], allObs, False)
         # ----------------------------------------------------------------------- #
 
 

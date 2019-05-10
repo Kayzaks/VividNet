@@ -19,3 +19,8 @@ class HyperParameters:
 
     # Learning
     AdamLearningRate = 0.0001
+
+    # Physics 
+    MaximumAttributeCount = 10
+    MaximumSymbolCount = 10
+    Dimensions = 2

@@ -9,6 +9,7 @@ class AttributePool:
     def __init__(self):
         self._pool  : dict = dict() # AttributeType - AttributeList
         self._names : dict = dict() # AttributeName - AttributeType
+        self._order : list = list() # List of AttributeNames
 
 
     def createType(self, attributeName : str, attributeLexical : AttributeLexical):
@@ -18,6 +19,7 @@ class AttributePool:
             currentType = AttributeType(attributeName, attributeLexical)
             self._pool[currentType] = []
             self._names[attributeName] = currentType
+            self._order.append(attributeName)
             return True
 
 
@@ -44,3 +46,10 @@ class AttributePool:
             print(attribute)
 
         return False
+
+
+    def getAttributeOrder(self, attribute : Attribute):
+        if attribute.getName() in self._order:
+            return self._order.index(attribute.getName())
+        else:
+            return -1

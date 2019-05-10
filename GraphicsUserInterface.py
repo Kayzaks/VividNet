@@ -2,6 +2,7 @@
 from matplotlib.widgets import Button
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import matplotlib.animation as animation
 from matplotlib.widgets import TextBox
 import numpy
 
@@ -96,3 +97,21 @@ class GraphicsUserInterface:
         plt.show()
     
         
+
+    def drawMovie(self, frames : list, width : int, height : int, framesPerSecond : int):
+        # frames        # List of List of Pixels
+
+        fig = plt.figure()
+
+        images = []
+        for frame in frames:
+            newImage = plt.imshow(numpy.reshape(frame, [height, width, 3]))
+            images.append([newImage])
+
+        fullAnim = animation.ArtistAnimation(fig, images, interval=(1000 / framesPerSecond), repeat_delay=0,
+                                        blit=True)
+                                        
+        # fullAnim.save('fullAnim.mp4')
+
+        plt.show()
+    

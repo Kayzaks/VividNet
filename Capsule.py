@@ -18,8 +18,9 @@ import itertools
 
 class Capsule:
 
-    def __init__(self, name : str):
+    def __init__(self, name : str, orderID : int):
         self._name              : str                       = name                      # Capsule Name / Symbol
+        self._orderID           : int                       = orderID                   # Capsule Order ID
         self._attributes        : collections.OrderedDict   = collections.OrderedDict() # Attribute Name - Attribute
         self._routes            : list                      = list()                    # Route
 
@@ -28,6 +29,10 @@ class Capsule:
 
     def getName(self):
         return self._name
+
+    
+    def getOrderID(self):
+        return self._orderID
 
 
     def continueTraining(self, showDebugOutput = True, specificSplit : list = None):

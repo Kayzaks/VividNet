@@ -11,6 +11,7 @@ class Observation:
         self._outputProbability     : float         = outputProbability
         self._route                                 = route
         self._capsule                               = capsule
+        self._previousObservation                   = None
 
         for obs in inputObservations:
             if type(obs) is list:
@@ -146,3 +147,21 @@ class Observation:
 
         for attr, valList in newOutputs.items():
             self._outputAttributes[attr] = valList[0]
+
+
+    def linkPreviousObservation(self, observation):
+        self._previousObservation = observation
+
+
+    def getVelocities(self, timeStep : float):
+        velocities = {}
+        if self._previousObservation is None:
+            for attr, value in self._outputAttributes:
+                velocities[attr] = 0.0
+        else:            
+            linkedOutputs = self._previousObservation.getOutputs()
+            for attr, value in self._outputAttributes:
+                velocities[attr] = (value - linkedOutputs[attr]) / timeStep
+
+        return velocities   # {Attribute, Velocity}
+

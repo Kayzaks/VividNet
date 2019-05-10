@@ -22,6 +22,7 @@ class CapsuleNetwork:
         self._attributePool      : AttributePool = AttributePool()
         self._renderer                           = None             # PrimitivesRenderer Instance
         self._metaLearner        : MetaLearner   = MetaLearner()
+        self._capsuleCount       : int           = 0
 
         # Adding all Meta Learner Lambdas:
         # 1. Observed Axioms have same $\Omega$ as parent
@@ -82,14 +83,15 @@ class CapsuleNetwork:
         if self._renderer is None:
             print("No Renderer of Type PrimitivesRenderer defined")
             return
-        currentCapsule = Capsule(str(primitive))
+        currentCapsule = Capsule(str(primitive), self._capsuleCount)
+        self._capsuleCount = self._capsuleCount + 1
         self._renderer.createAttributesForPrimitive(primitive, currentCapsule, self._attributePool)
 
         for filterShape in filterShapes:
             pixelCapsule = None
 
             if filterShape not in self._pixelCapsules:
-                pixelCapsule = Capsule("PixelLayer-" + str(filterShape[0]) + "-" + str(filterShape[1]))
+                pixelCapsule = Capsule("PixelLayer-" + str(filterShape[0]) + "-" + str(filterShape[1]), -1)
                 self._renderer.createAttributesForPixelLayer(filterShape[0], filterShape[1], pixelCapsule, self._attributePool)
                 self._pixelCapsules[filterShape] = pixelCapsule
             else:
@@ -109,7 +111,8 @@ class CapsuleNetwork:
 
     def addSemanticCapsule(self, name : str, fromObservations : list, additionalTraining : int = 0):
         # fromObservations          # List of Observations for one Occurance
-        currentCapsule = Capsule(name)
+        currentCapsule = Capsule(name, self._capsuleCount)
+        self._capsuleCount = self._capsuleCount + 1
         currentCapsule.addSemanticRoute(fromObservations, self._attributePool)
         
         maxLayerID = -1

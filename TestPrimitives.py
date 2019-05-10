@@ -12,6 +12,7 @@ from PrimitivesRenderer import Primitives
 from PrimitivesRenderer import PrimitivesRenderer
 from PrimitivesRenderer import cudaGreyDCT
 from PrimitivesRenderer import applyFilters
+from PrimitivesPhysics import PrimitivesPhysics
 from AttributeType import AttributeLexical
 from AttributePool import AttributePool
 
@@ -202,3 +203,10 @@ class TestRenderer(PrimitivesRenderer):
             extras.append(float(primitive))
             extras.extend(currList)
         return np.concatenate((attributes, extras), axis=None)
+
+
+
+class TestPhysics(PrimitivesPhysics):
+
+    def __init__(self):
+        self.X = 0
