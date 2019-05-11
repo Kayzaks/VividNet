@@ -5,7 +5,7 @@ import keyboard
 import threading
 from Utility import Utility
 from pathlib import Path
-from CapsuleMemory import CapsuleMemory
+from Memory import Memory
 from HyperParameters import HyperParameters
 
 import os
@@ -24,19 +24,25 @@ def meanl1(y_true, y_pred):
 
 
 class NeuralNet:
-    def __init__(self, inputMapping : dict, outputMapping : dict, neuralNetName : str, swapInputOutput : bool):
+    def __init__(self, inputMapping : dict, outputMapping : dict, neuralNetName : str, swapInputOutput : bool, rawData : bool = False, rawShape = None):
                 
         self._name          : str   = neuralNetName
-        self._inputMapping  : dict  = inputMapping                      # Attribute - List of Indices
-        self._outputMapping : dict  = outputMapping                     # Attribute - List of Indices
+        self._inputMapping  : dict  = inputMapping                      # Object - List of Indices
+        self._outputMapping : dict  = outputMapping                     # Object - List of Indices
         self._swapInOut     : bool  = swapInputOutput
+        self._rawData       : bool  = rawData                           # Use Raw Data or Mapping
 
         lenInputs = 0
         lenOutputs = 0
-        for idxList in inputMapping.values():
-            lenInputs = lenInputs + len(idxList)
-        for idxList in outputMapping.values():
-            lenOutputs = lenOutputs + len(idxList)
+
+        if rawData is False:
+            for idxList in inputMapping.values():
+                lenInputs = lenInputs + len(idxList)
+            for idxList in outputMapping.values():
+                lenOutputs = lenOutputs + len(idxList)
+        else:
+            lenInputs = rawShape[0]
+            lenOutputs = rawShape[1]
 
         self._inputShape    : tuple = (1, lenInputs)
         self._numOutputs    : int   = lenOutputs
@@ -98,7 +104,7 @@ class NeuralNet:
         return
 
 
-    def trainFromData(self, trainingData : CapsuleMemory, showDebugOutput : bool = True, onlyTrain : list = None, retrain : bool = False):
+    def trainFromData(self, trainingData : Memory, showDebugOutput : bool = True, onlyTrain : list = None, retrain : bool = False):
         if threading.current_thread() == threading.main_thread():
             self.beginTraining()
 
@@ -110,12 +116,15 @@ class NeuralNet:
             if showDebugOutput is True:
                 print("Generating Training Set (Train=" + str(self._numTrain) + ", Test=" + str(self._numTest) + ")")
 
-            if self._swapInOut is False:
-                X_train, Y_train = trainingData.nextBatch(self._numTrain, self._inputMapping, self._outputMapping)
-                X_test, Y_test = trainingData.nextBatch(self._numTest, self._inputMapping, self._outputMapping)
+            if self._rawData is False:
+                if self._swapInOut is False:
+                    X_train, Y_train = trainingData.nextBatch(self._numTrain, self._inputMapping, self._outputMapping)
+                    X_test, Y_test = trainingData.nextBatch(self._numTest, self._inputMapping, self._outputMapping)
+                else:
+                    Y_train, X_train = trainingData.nextBatch(self._numTrain, self._outputMapping, self._inputMapping)
+                    Y_test, X_test = trainingData.nextBatch(self._numTest, self._outputMapping, self._inputMapping)
             else:
-                Y_train, X_train = trainingData.nextBatch(self._numTrain, self._outputMapping, self._inputMapping)
-                Y_test, X_test = trainingData.nextBatch(self._numTest, self._outputMapping, self._inputMapping)
+                X_train, Y_train = trainingData.nextBatch(self._numTrain, None, None)
 
             if showDebugOutput is True:
                 print("Done Generating Training Set")
@@ -181,8 +190,9 @@ class NeuralNet:
 
 
 
-    def forwardPass(self, inputs : dict):
-        # inputs        # Attribute  -  List of Values
+    def forwardPass(self, inputs):
+        # inputs        # Object  -  List of Values   (rawData = False)
+        # inputs        # List of Values              (rawData = True)
         
         if self.hasTraining() == False:
             print("Can't perform forward pass, as Neural Net has not been trained")
@@ -190,7 +200,10 @@ class NeuralNet:
         else:
             self.loadFromFile()
 
-        inputs = np.asarray(Utility.mapDataOneWayDictRevList(inputs, self._inputMapping))
+        if self._rawData is False:
+            inputs = np.asarray(Utility.mapDataOneWayDictRevList(inputs, self._inputMapping))
+        else:
+            inputs = np.asarray(inputs)
         inputs = inputs.reshape(self._inputShape)
 
         results = []
@@ -201,4 +214,7 @@ class NeuralNet:
             else:
                 results = np.append(results, np.zeros(self._modelSplit[index + 1] - self._modelSplit[index]))
                 
-        return Utility.mapDataOneWayRevList(results, self._outputMapping)    # Attribute - List of Values
+        if self._rawData is False:
+            return Utility.mapDataOneWayRevList(results, self._outputMapping)    # Object - List of Values
+        else:
+            return results                                                       # List of Values

@@ -23,6 +23,7 @@ class CapsuleNetwork:
         self._renderer                           = None             # PrimitivesRenderer Instance
         self._metaLearner        : MetaLearner   = MetaLearner()
         self._capsuleCount       : int           = 0
+        self._name               : str           = "CapsuleNetwork"
 
         # Adding all Meta Learner Lambdas:
         # 1. Observed Axioms have same $\Omega$ as parent
@@ -34,6 +35,10 @@ class CapsuleNetwork:
         # 4. $\Omega: Z(\vec{\alpha}, \vec{\tilde{\alpha}})$ indicates one attribute mismatch \\ with no entry in memory $\alpha^i >\epsilon$
         # TODO: self._metaLearner.addLambda(lambda obs, axioms : self.agreementOfMostLikelyParent(axioms))
         # 5. $\Omega: Z(\vec{\alpha}, \vec{\tilde{\alpha}})$ indicates attribute mismatch \\ for (position, rotation, size) only
+
+
+    def getName(self):
+        return self._name
 
 
     def agreementOfMostLikelyParent(self, observedAxioms : dict):
@@ -75,6 +80,10 @@ class CapsuleNetwork:
     def setRenderer(self, rendererClass):
         # rendererClass     # Class PrimitivesRenderer
         self._renderer = rendererClass(self._attributePool)
+
+    
+    def getRenderer(self):
+        return self._renderer
 
 
     def addPrimitiveCapsule(self, primitive : Primitives, filterShapes : list, additionalTraining : int = 0):

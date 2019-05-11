@@ -2,11 +2,12 @@ from Attribute import Attribute
 from Utility import Utility
 from Observation import Observation
 from HyperParameters import HyperParameters
+from Memory import Memory
 import numpy
 import random
 import math
 
-class CapsuleMemory:
+class CapsuleMemory(Memory):
 
     def __init__(self):        
         self._observations      : list  = list() # Observation

@@ -4,8 +4,9 @@
 
 from TestPrimitives import TestPrimitives
 from TestPrimitives import TestRenderer
-from TestPrimitives import TestPhysics
+from TestPhysics import TestPhysics
 from CapsuleNetwork import CapsuleNetwork
+from VividNet import VividNet
 from Observation import Observation
 from AttributePool import AttributePool
 from Capsule import Capsule
@@ -30,16 +31,15 @@ set_session(tf.Session(config=config))
 if __name__ == '__main__':
     testUI = GraphicsUserInterface()
 
-    capsNet = CapsuleNetwork()
-    capsNet.setRenderer(TestRenderer)
+    vividNet = VividNet()
+    
+    primCaps = vividNet.setRenderer(TestRenderer, TestPrimitives)
+    vividNet.setSyntheticPhysics(TestPhysics)
 
-    width = 28                  # Width of the Primitive Capsule Input
-    height = 28                 # Height of the Primitive Capsule Input
+    circleCapsule = primCaps[TestPrimitives.Circle]
+
     shape = (84, 84)            # Total Size of the Image
     
-    # Set-up of Primitive Capsules
-    circleCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Circle, [(width, height)], 0) #, 1) 
-
     numFrames = 10 #0
     frames = []
 

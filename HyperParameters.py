@@ -24,3 +24,4 @@ class HyperParameters:
     MaximumAttributeCount = 10
     MaximumSymbolCount = 10
     Dimensions = 2
+    DegreesOfFreedom = Dimensions * 3 - 3

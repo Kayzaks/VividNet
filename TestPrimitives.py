@@ -12,7 +12,6 @@ from PrimitivesRenderer import Primitives
 from PrimitivesRenderer import PrimitivesRenderer
 from PrimitivesRenderer import cudaGreyDCT
 from PrimitivesRenderer import applyFilters
-from PrimitivesPhysics import PrimitivesPhysics
 from AttributeType import AttributeLexical
 from AttributePool import AttributePool
 
@@ -132,12 +131,15 @@ class TestRenderer(PrimitivesRenderer):
         primAttributes[6] = ("Strength", AttributeLexical.Adjective)
                 
         self.setPrimitiveAttributes(TestPrimitives.Circle, attributePool, primAttributes)
+        self.addPrimitiveDimensions(TestPrimitives.Circle, 28, 28)
 
         # Square   
         self.setPrimitiveAttributes(TestPrimitives.Square, attributePool, primAttributes)
+        self.addPrimitiveDimensions(TestPrimitives.Square, 28, 28)
 
         # Triangle   
         self.setPrimitiveAttributes(TestPrimitives.Triangle, attributePool, primAttributes)
+        self.addPrimitiveDimensions(TestPrimitives.Triangle, 28, 28)
 
 
         self.setKernel(cudaKernel)
@@ -204,9 +206,3 @@ class TestRenderer(PrimitivesRenderer):
             extras.extend(currList)
         return np.concatenate((attributes, extras), axis=None)
 
-
-
-class TestPhysics(PrimitivesPhysics):
-
-    def __init__(self):
-        self.X = 0

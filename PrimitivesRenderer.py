@@ -127,7 +127,8 @@ class PrimitivesRenderer:
 
     def __init__(self, attributePool : AttributePool):
         self._kernel = None
-        self._attributeLayouts = {}
+        self._attributeLayouts  : dict = {}     # Index - (Name, Lexical)
+        self._primtiveDimension : dict = {}     # Primitive - [(width, height)]
 
         self.definePrimitives(attributePool)
 
@@ -167,6 +168,9 @@ class PrimitivesRenderer:
 
     # --------------------
 
+
+    def getDimensions(self):
+        return self._primtiveDimension
 
 
     def setKernel(self, kernelFunction):
@@ -288,6 +292,12 @@ class PrimitivesRenderer:
         for key, value in self._attributeLayouts[primitive].items():
             capsule.createAttribute(value[0], attributePool)
 
+
+    def addPrimitiveDimensions(self, primitive : Primitives, width : int, height : int):
+        if primitive in self._primtiveDimension:
+            self._primtiveDimension[primitive].append((width, height))
+        else:
+            self._primtiveDimension[primitive] = [(width, height)]
 
 
     def renderPrimitive(self, primitive : Primitives, attributes : list, width : int, height : int, isTraining : bool = False, altBackground = None, showDebug : bool = False):

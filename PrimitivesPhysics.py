@@ -11,6 +11,20 @@ class PrimitivesPhysics:
         self._attributePool = attributePool
 
 
+    # -------------------- User Defined
+    
+    def generateRelation(self):
+        triplet = [0.0]
+        effect  = [0.0]
+        return triplet, effect
+
+    def generateInteraction(self):
+        aggregate  = [0.0]
+        attributes = [0.0]
+        return aggregate, attributes
+
+    # --------------------
+
 
     def render(self, capsNet : CapsuleNetwork, observationFrames : list, width : int, height : int):
         # observationFrames     # List of Dictionaries {capsule, List of Observations}

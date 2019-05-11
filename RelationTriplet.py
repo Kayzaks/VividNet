@@ -1,9 +1,28 @@
 from Observation import Observation
 from HyperParameters import HyperParameters
 from AttributePool import AttributePool
+from Capsule import Capsule
 from CapsuleNetwork import CapsuleNetwork
 
 class RelationTriplet:
+
+    @staticmethod
+    def tripletLength():
+        return (2 * (HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2) + (2 + 2 * HyperParameters.Dimensions))
+
+
+    @staticmethod
+    def mapAttributes(attributePool : AttributePool, capsule : Capsule, values : list):
+        attributes = capsule.getAttributes()
+        outputs : dict = {}
+        for attr in attributes:
+            idx = attributePool.getAttributeOrder(attr)
+            if idx > -1:
+                outputs[attr] = values[idx]
+            else:
+                outputs[attr] = 0.0
+        return outputs
+
 
     @staticmethod
     def generate(senderObservation : Observation, receiverObservation : Observation, attributePool : AttributePool, capsNet : CapsuleNetwork):
@@ -55,7 +74,7 @@ class RelationTriplet:
 
         # Degrees-Of-Freedom
         # TODO:
-        triplet[2 * totalObjectEntries + 1] = 2.0 / float(HyperParameters.Dimensions * 3 - 3)
+        triplet[2 * totalObjectEntries + 1] = 2.0 / float(HyperParameters.DegreesOfFreedom)
 
         # Sender Normal
         # TODO:

@@ -12,9 +12,16 @@ class VividNet:
         self._intuitivePhysics : IntuitivePhysics   = IntuitivePhysics(self._capsuleNetwork)
 
 
-    def setRenderer(self, primitivesRenderer : PrimitivesRenderer):
-        self._capsuleNetwork.setRenderer(primitivesRenderer)
-        
+    def setRenderer(self, rendererClass, primitivesEnum, extraTraining : int = 0):
+        self._capsuleNetwork.setRenderer(rendererClass)
 
-    def setPhysics(self, primitivesPhysics : PrimitivesPhysics):
-        self._intuitivePhysics.setPhysics(primitivesPhysics)
+        capsuleList = {}
+        dimensions = self._capsuleNetwork.getRenderer().getDimensions()
+        for primType in primitivesEnum:
+            capsuleList[primType] = self._capsuleNetwork.addPrimitiveCapsule(primType, dimensions[primType], extraTraining) 
+
+        return capsuleList
+
+ 
+    def setSyntheticPhysics(self, primitivesPhysics : PrimitivesPhysics):
+        self._intuitivePhysics.fillMemorySynthetically(primitivesPhysics)
