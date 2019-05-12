@@ -6,6 +6,7 @@ from TestPrimitives import TestPrimitives
 from TestPrimitives import TestRenderer
 from TestPhysics import TestPhysics
 from CapsuleNetwork import CapsuleNetwork
+from HyperParameters import HyperParameters
 from VividNet import VividNet
 from Observation import Observation
 from AttributePool import AttributePool
@@ -32,9 +33,9 @@ if __name__ == '__main__':
     testUI = GraphicsUserInterface()
 
     vividNet = VividNet()
-    
+
     primCaps = vividNet.setRenderer(TestRenderer, TestPrimitives)
-    vividNet.setSyntheticPhysics(TestPhysics)
+    vividNet.setSyntheticPhysics(TestPhysics) 
 
     circleCapsule = primCaps[TestPrimitives.Circle]
 
@@ -73,10 +74,13 @@ if __name__ == '__main__':
         frames.append(allObs)
 
 
-    physics = TestPhysics()
+    physics = TestPhysics(vividNet._capsuleNetwork.getAttributePool())
 
-    drawFrames = physics.render(capsNet, frames, shape[0], shape[1])
+    print(physics.generateRelation())
+    print(physics.generateInteraction())
 
-    testUI.drawMovie(drawFrames, shape[0], shape[1], 24)
+    # drawFrames = physics.render(vividNet._capsuleNetwork, frames, shape[0], shape[1])
+
+    #testUI.drawMovie(drawFrames, shape[0], shape[1], HyperParameters.TimeStep)
 
 

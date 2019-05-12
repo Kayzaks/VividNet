@@ -53,3 +53,12 @@ class AttributePool:
             return self._order.index(attribute.getName())
         else:
             return -1
+
+
+    def getAttributeOrderByName(self, attributeName : str):
+        if attributeName in self._order:
+            return self._order.index(attributeName)
+        else:
+            return -1
+
+            

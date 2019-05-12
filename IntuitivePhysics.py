@@ -20,7 +20,7 @@ class IntuitivePhysics:
         self._physicsMemory    : PhysicsMemory     = PhysicsMemory()
         
         # Object Attributes + Symbol + Effects + External Effects
-        phiOInput = HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount  + HyperParameters.DegreesOfFreedom * 2   
+        phiOInput = HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount  + HyperParameters.DegreesOfFreedom * 2   
 
         self._neuralNetPhiR = NeuralNetPhiR(None, None, capsNet.getName() + "-IP-PhiR", False, True, (RelationTriplet.tripletLength(), HyperParameters.DegreesOfFreedom))
         self._neuralNetPhiO = NeuralNetPhiO(None, None, capsNet.getName() + "-IP-PhiO", False, True, (phiOInput, HyperParameters.MaximumAttributeCount))
@@ -31,7 +31,7 @@ class IntuitivePhysics:
         # external      # External Effect Vector
         # observation   # Original Observation
 
-        aggregated = [0.0] * (HyperParameters.MaximumAttributeCount + HyperParameters.DegreesOfFreedom * 2)
+        aggregated = [0.0] * (HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount + HyperParameters.DegreesOfFreedom * 2)
         
         for attr, value in observation.getOutputsList().items():
             pos = self._capsuleNetwork.getAttributePool().getAttributeOrder(attr)
@@ -41,16 +41,21 @@ class IntuitivePhysics:
         if observation.getCapsule().getOrderID() < HyperParameters.MaximumSymbolCount:
             aggregated[HyperParameters.MaximumAttributeCount + observation.getCapsule().getOrderID()] = 1.0
 
+        for attr, value in observation.getVelocities().items():
+            pos = self._capsuleNetwork.getAttributePool().getAttributeOrder(attr)
+            if pos > -1:
+                aggregated[HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount + pos] = value
+
         for i in range(HyperParameters.DegreesOfFreedom):
             summed = 0.0
             for effect in effects:
                 summed = summed + effect[i]
-            aggregated[HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount + i] = summed      
+            aggregated[HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount + i] = summed      
             
         for i in range(HyperParameters.DegreesOfFreedom):
-            aggregated[HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount  + HyperParameters.DegreesOfFreedom + i] = external[i]
+            aggregated[HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount  + HyperParameters.DegreesOfFreedom + i] = external[i]
 
-        return aggregated     # Object Attributes + Symbol + Effects + External Effects
+        return aggregated     # Object Attributes + Symbol + Velocities + Effects + External Effects
 
 
     def fillMemorySynthetically(self, primitivesPhysics : PrimitivesPhysics):

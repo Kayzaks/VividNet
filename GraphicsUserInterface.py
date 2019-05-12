@@ -98,7 +98,7 @@ class GraphicsUserInterface:
     
         
 
-    def drawMovie(self, frames : list, width : int, height : int, framesPerSecond : int):
+    def drawMovie(self, frames : list, width : int, height : int, deltaT : float):
         # frames        # List of List of Pixels
 
         fig = plt.figure()
@@ -108,7 +108,7 @@ class GraphicsUserInterface:
             newImage = plt.imshow(numpy.reshape(frame, [height, width, 3]))
             images.append([newImage])
 
-        fullAnim = animation.ArtistAnimation(fig, images, interval=(1000 / framesPerSecond), repeat_delay=0,
+        fullAnim = animation.ArtistAnimation(fig, images, interval=deltaT * 1000, repeat_delay=0,
                                         blit=True)
                                         
         # fullAnim.save('fullAnim.mp4')

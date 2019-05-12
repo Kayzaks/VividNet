@@ -18,7 +18,8 @@ class VividNet:
         capsuleList = {}
         dimensions = self._capsuleNetwork.getRenderer().getDimensions()
         for primType in primitivesEnum:
-            capsuleList[primType] = self._capsuleNetwork.addPrimitiveCapsule(primType, dimensions[primType], extraTraining) 
+            if int(primType) > -1:
+                capsuleList[primType] = self._capsuleNetwork.addPrimitiveCapsule(primType, dimensions[primType], extraTraining) 
 
         return capsuleList
 
