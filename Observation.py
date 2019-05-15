@@ -161,7 +161,11 @@ class Observation:
         else:            
             linkedOutputs = self._previousObservation.getOutputs()
             for attr, value in self._outputAttributes:
-                velocities[attr] = (value - linkedOutputs[attr]) / timeStep
+                velocities[attr] = (value - linkedOutputs[attr]) / timeStep 
+                if attr in self._accelerations:
+                    velocities[attr] = velocities[attr] 
 
         return velocities   # {Attribute, Velocity}
+
+    
 

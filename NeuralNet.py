@@ -125,6 +125,7 @@ class NeuralNet:
                     Y_test, X_test = trainingData.nextBatch(self._numTest, self._outputMapping, self._inputMapping)
             else:
                 X_train, Y_train = trainingData.nextBatch(self._numTrain, None, None)
+                X_test, Y_test = trainingData.nextBatch(self._numTest, None, None)
 
             if showDebugOutput is True:
                 print("Done Generating Training Set")

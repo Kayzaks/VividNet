@@ -26,3 +26,4 @@ class HyperParameters:
     Dimensions = 2
     DegreesOfFreedom = Dimensions * 3 - 3
     TimeStep = 1.0 / 24.0
+    AccelerationScale = 10.0 

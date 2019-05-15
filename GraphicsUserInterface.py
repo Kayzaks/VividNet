@@ -110,8 +110,10 @@ class GraphicsUserInterface:
 
         fullAnim = animation.ArtistAnimation(fig, images, interval=deltaT * 1000, repeat_delay=0,
                                         blit=True)
-                                        
-        # fullAnim.save('fullAnim.mp4')
+                      
+        #Writer = animation.writers['ffmpeg']
+        #writer = Writer(fps=int(1 / deltaT), metadata=dict(artist='VividNet'), bitrate=1800)                  
+        #fullAnim.save('fullAnim.mp4', writer= writer)
 
         plt.show()
     

@@ -33,12 +33,12 @@ class PrimitivesPhysics:
 
     def generateInteraction(self):
         # Aggregate Format:
-        # Receiver -- Attributes | Symbol | Velocities
+        # Receiver -- Attributes | Symbol | Velocities | Static/Dynamic | Rigid/Elastic
         # Effects  -- Summed Effect Acceleration Vector | Summed Effect Angle Acceleration Vector
         # External -- External Acceleration Vector | External Angle Acceleration Vector
 
         # Attributes Format:
-        # Receiver -- Attributes
+        # Receiver -- Attributes | Accelerations
 
         aggregate  = [0.0]
         attributes = [0.0]

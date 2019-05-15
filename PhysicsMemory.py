@@ -1,6 +1,7 @@
 
 from Memory import Memory
 from PrimitivesPhysics import PrimitivesPhysics
+from AttributePool import AttributePool
 
 from enum import Enum
 
@@ -17,8 +18,8 @@ class PhysicsMemory:
         self._generatorMode      :  PhysicsMemoryMode = PhysicsMemoryMode.PhiR
 
     
-    def setSyntheticPhysics(self, synthPhysics : PrimitivesPhysics):
-        self._syntheticPhysics = synthPhysics
+    def setSyntheticPhysics(self, primitivesPhysics : PrimitivesPhysics, attributePool : AttributePool):
+        self._syntheticPhysics = primitivesPhysics(attributePool)
 
 
     def setMode(self, mode : PhysicsMemoryMode):

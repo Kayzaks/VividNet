@@ -8,17 +8,17 @@ class RelationTriplet:
 
     @staticmethod
     def tripletLength():
-        return (2 * (HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2) + (2 + 2 * HyperParameters.Dimensions))
+        return (2 * (HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2) + (1 + HyperParameters.DegreesOfFreedom + 2 * HyperParameters.Dimensions))
 
 
     @staticmethod
-    def mapAttributes(attributePool : AttributePool, capsule : Capsule, values : list):
+    def mapAttributes(attributePool : AttributePool, capsule : Capsule, values : list, offset : int = 0):
         attributes = capsule.getAttributes()
         outputs : dict = {}
         for attr in attributes:
             idx = attributePool.getAttributeOrder(attr)
             if idx > -1:
-                outputs[attr] = values[idx]
+                outputs[attr] = values[idx + offset]
             else:
                 outputs[attr] = 0.0
         return outputs
@@ -74,16 +74,18 @@ class RelationTriplet:
 
         # Degrees-Of-Freedom
         # TODO:
-        triplet[2 * totalObjectEntries + 1] = 2.0 / float(HyperParameters.DegreesOfFreedom)
+        triplet[2 * totalObjectEntries + 1] = 1.0
+        triplet[2 * totalObjectEntries + 2] = 1.0
+        triplet[2 * totalObjectEntries + 3] = 1.0
 
         # Sender Normal
         # TODO:
-        triplet[2 * totalObjectEntries + 2] = 1.0
-        triplet[2 * totalObjectEntries + 3] = 0.0
+        triplet[2 * totalObjectEntries + HyperParameters.DegreesOfFreedom] = 1.0
+        triplet[2 * totalObjectEntries + HyperParameters.DegreesOfFreedom + 1] = 0.0
 
         # Receiver Normal
         # TODO:
-        triplet[2 * totalObjectEntries + 5] = -1.0
-        triplet[2 * totalObjectEntries + 6] = 0.0
+        triplet[2 * totalObjectEntries + HyperParameters.DegreesOfFreedom + 2] = -1.0
+        triplet[2 * totalObjectEntries + HyperParameters.DegreesOfFreedom + 3] = 0.0
 
         return triplet
