@@ -1,4 +1,5 @@
 from Attribute import Attribute
+from HyperParameters import HyperParameters
 
 class Observation:
 
@@ -12,6 +13,7 @@ class Observation:
         self._route                                 = route
         self._capsule                               = capsule
         self._previousObservation                   = None
+        self._accelerations         : dict          = {}                    # Attribute - Value
 
         for obs in inputObservations:
             if type(obs) is list:
@@ -153,18 +155,24 @@ class Observation:
         self._previousObservation = observation
 
 
+    def setAccelerations(self, accelerations : dict):
+        self._accelerations = accelerations
+
+
     def getVelocities(self, timeStep : float):
         velocities = {}
         if self._previousObservation is None:
-            for attr, value in self._outputAttributes:
+            for attr, value in self._outputAttributes.items():
                 velocities[attr] = 0.0
         else:            
             linkedOutputs = self._previousObservation.getOutputs()
-            for attr, value in self._outputAttributes:
-                velocities[attr] = (value - linkedOutputs[attr]) / timeStep 
+            for attr, value in self._outputAttributes.items():
+                velocities[attr] = (value - linkedOutputs[attr]) / timeStep
                 if attr in self._accelerations:
-                    velocities[attr] = velocities[attr] 
-
+                    velocities[attr] = velocities[attr] + 0.5 * self._accelerations[attr] * timeStep
+                if velocities[attr] < HyperParameters.VelocityCutoff:
+                    # "Smooth" out small error fluctuations
+                    velocities[attr] = 0.0
         return velocities   # {Attribute, Velocity}
 
     

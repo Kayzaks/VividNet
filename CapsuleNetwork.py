@@ -17,6 +17,7 @@ class CapsuleNetwork:
         self._primitiveCapsules  : list          = []               # Capsule
         self._semanticCapsules   : list          = []               # Capsule
         self._pixelCapsules      : dict          = {}               # Shape Tuple - Capsule
+        self._capsulePrimitive   : dict          = {}               # Primitive Capsule - Primitive Type
         self._semanticLayers     : dict          = {}               # Layer Index - Capsule List
         self._numSemanticLayers  : int           = 0                
         self._attributePool      : AttributePool = AttributePool()
@@ -93,6 +94,7 @@ class CapsuleNetwork:
             print("No Renderer of Type PrimitivesRenderer defined")
             return
         currentCapsule = Capsule(str(primitive), self._capsuleCount)
+        self._capsulePrimitive[currentCapsule] = primitive
         self._capsuleCount = self._capsuleCount + 1
         self._renderer.createAttributesForPrimitive(primitive, currentCapsule, self._attributePool)
 
@@ -383,3 +385,19 @@ class CapsuleNetwork:
             texts.append((minX, minY, capsule.getName()))
 
         return image, semantics, texts    # Linear List of Pixels
+
+
+    def distance(self, observationA : Observation, observationB : Observation):
+        distance = 0.0
+        normal1 = [0.0, 0.0]
+        normal2 = [0.0, 0.0]
+        
+        if observationA.getCapsule() in self._primitiveCapsules:
+            distance, normal1, normal2 = self._renderer.getDistance(
+                    self._capsulePrimitive[observationA.getCapsule()], self._capsulePrimitive[observationB.getCapsule()],
+                    observationA.getOutputs(), observationB.getOutputs())
+
+
+        # TODO: Semantic Capsules
+
+        return distance, normal1, normal2

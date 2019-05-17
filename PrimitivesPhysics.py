@@ -30,6 +30,7 @@ class PrimitivesPhysics:
         triplet = [0.0]
         effect  = [0.0]
         return triplet, effect
+        
 
     def generateInteraction(self):
         # Aggregate Format:

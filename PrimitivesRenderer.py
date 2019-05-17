@@ -166,7 +166,39 @@ class PrimitivesRenderer:
         return attributes
 
 
+    def getDistance(self, primitiveA : Primitives, primitiveB : Primitives, attributesA : dict, attributesB : dict):
+        # Example Distance Function
+        posA, rotA, sizeA = self.getPositionRotationSize(attributesA)
+        posB, rotB, sizeB = self.getPositionRotationSize(attributesB)
+
+        direction = (posB - posA)
+        distance = np.linalg.norm(direction)
+        normalA = direction / distance
+        normalB = -direction / distance
+
+        distance = distance - (sizeA + sizeB) * 0.5
+
+        return distance, normalA, normalB
+
     # --------------------
+
+
+    def getPositionRotationSize(self, attributes : dict):
+        position = np.array([0.0, 0.0])
+        rotation = 0.0
+        size = 0.0
+
+        for attr, value in attributes.items():
+            if attr.getName() == "Position-X":
+                position[0] = value
+            elif attr.getName() == "Position-Y":
+                position[1] = value
+            elif attr.getName() == "Size":
+                size = value
+            elif attr.getName() == "Rotation":
+                rotation = value
+
+        return position, rotation, size
 
 
     def getDimensions(self):

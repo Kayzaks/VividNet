@@ -26,10 +26,10 @@ class RelationTriplet:
 
     @staticmethod
     def generate(senderObservation : Observation, receiverObservation : Observation, attributePool : AttributePool, capsNet : CapsuleNetwork):
-        senderOutputs = senderObservation.getOutputsList()
-        receiverOutputs = receiverObservation.getOutputsList()
-        senderVelocities = senderObservation.getVelocities()
-        receiverVelocities = receiverObservation.getVelocities()
+        senderOutputs = senderObservation.getOutputs()
+        receiverOutputs = receiverObservation.getOutputs()
+        senderVelocities = senderObservation.getVelocities(HyperParameters.TimeStep)
+        receiverVelocities = receiverObservation.getVelocities(HyperParameters.TimeStep)
         
         # Triplet Format:
         # Sender   -- Symbol | Attributes | Velocities | Static/Dynamic | Rigid/Elastic
@@ -37,7 +37,7 @@ class RelationTriplet:
         # Relation -- Distance | Degrees-Of-Freedom | Sender Normal | Receiver Normal
         
         totalObjectEntries = (HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2)
-        triplet = [0.0] * (2 * totalObjectEntries + (2 + 2 * HyperParameters.Dimensions))
+        triplet = [0.0] * RelationTriplet.tripletLength()
 
         # Symbols
         if senderObservation.getCapsule().getOrderID() < HyperParameters.MaximumSymbolCount:
@@ -46,16 +46,19 @@ class RelationTriplet:
             triplet[totalObjectEntries + receiverObservation.getCapsule().getOrderID()] = 1.0
 
         # Attributes / Velocities
+        for i in range(HyperParameters.MaximumAttributeCount):
+            triplet[HyperParameters.MaximumSymbolCount + HyperParameters.MaximumAttributeCount + i] = 0.5
+            triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + HyperParameters.MaximumAttributeCount + i] = 0.5
         for outputAttribute, outputValue in senderOutputs.items():
             pos = attributePool.getAttributeOrder(outputAttribute)
             if pos > -1:
                 triplet[HyperParameters.MaximumSymbolCount + pos] = outputValue
-                triplet[HyperParameters.MaximumSymbolCount + HyperParameters.MaximumAttributeCount + pos] = senderVelocities[outputAttribute]
+                triplet[HyperParameters.MaximumSymbolCount + HyperParameters.MaximumAttributeCount + pos] = (senderVelocities[outputAttribute] + 1.0) * 0.5
         for outputAttribute, outputValue in receiverOutputs.items():
             pos = attributePool.getAttributeOrder(outputAttribute)
             if pos > -1:
                 triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + pos] = outputValue
-                triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + HyperParameters.MaximumAttributeCount + pos] = receiverVelocities[outputAttribute]
+                triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + HyperParameters.MaximumAttributeCount + pos] = (receiverVelocities[outputAttribute] + 1.0) * 0.5
 
 
         # Static / Dynamic
@@ -69,8 +72,8 @@ class RelationTriplet:
         triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = 0.0
 
         # Distance
-        # TODO:
-        triplet[2 * totalObjectEntries] = 0.0
+        dist, norm1, norm2 = capsNet.distance(senderObservation, receiverObservation)
+        triplet[2 * totalObjectEntries] = dist
 
         # Degrees-Of-Freedom
         # TODO:
@@ -78,14 +81,9 @@ class RelationTriplet:
         triplet[2 * totalObjectEntries + 2] = 1.0
         triplet[2 * totalObjectEntries + 3] = 1.0
 
-        # Sender Normal
-        # TODO:
-        triplet[2 * totalObjectEntries + HyperParameters.DegreesOfFreedom] = 1.0
-        triplet[2 * totalObjectEntries + HyperParameters.DegreesOfFreedom + 1] = 0.0
+        # Normal:
+        for i in range(HyperParameters.Dimensions):
+            triplet[2 * totalObjectEntries + 1 + HyperParameters.DegreesOfFreedom + i] = (norm1[i] + 1.0) * 0.5
+            triplet[2 * totalObjectEntries + 1 + HyperParameters.DegreesOfFreedom + HyperParameters.Dimensions + i] = (norm2[i] + 1.0) * 0.5
 
-        # Receiver Normal
-        # TODO:
-        triplet[2 * totalObjectEntries + HyperParameters.DegreesOfFreedom + 2] = -1.0
-        triplet[2 * totalObjectEntries + HyperParameters.DegreesOfFreedom + 3] = 0.0
-
-        return triplet
+        return triplet, dist

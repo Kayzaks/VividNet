@@ -37,20 +37,15 @@ class TestPhysics(PrimitivesPhysics):
         ######### TRIPLET
         totalObjectEntries = (HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2)
         
-        hasCollision = False
         if random.randint(0, 100) % 2 == 0:
+            triplet[2 * totalObjectEntries] = random.random() * HyperParameters.DistanceCutoff
             hasCollision = True
-
-        # Collision?
-        if hasCollision is True:
-            # Yes
-            triplet[2 * totalObjectEntries] = random.random() * 0.01
         else:
-            # No
-            triplet[2 * totalObjectEntries] = random.random() * 0.6 + 0.01
+            triplet[2 * totalObjectEntries] = random.random() + HyperParameters.DistanceCutoff 
+            hasCollision = False
 
-        massSizeA = random.random() * 0.4 + 0.2
-        massSizeB = random.random() * 0.4 + 0.2
+        massSizeA = random.random()
+        massSizeB = random.random()
 
         positionA = np.array([random.random(), random.random()])
         differenceVector = np.array([random.random() - 0.5, random.random() - 0.5])
@@ -65,12 +60,6 @@ class TestPhysics(PrimitivesPhysics):
         velocityA = random.random() * np.array([differenceVector[0] * math.cos(offRotA) - differenceVector[1] * math.sin(offRotA), differenceVector[0] * math.cos(offRotA) + differenceVector[1] * math.sin(offRotA)])
         velocityB = random.random() * np.array([-differenceVector[0] * math.cos(offRotB) + differenceVector[1] * math.sin(offRotB), -differenceVector[0] * math.cos(offRotB) - differenceVector[1] * math.sin(offRotB)])
 
-        # Even though balls are close, they are going in different directions
-        if hasCollision is True:
-            if np.dot(velocityA, differenceVector) < 0 and (np.dot(velocityB, differenceVector) > 0 or np.linalg.norm(velocityB) < np.linalg.norm(velocityA)):
-                hasCollision = False
-            elif np.dot(velocityB, -differenceVector) < 0 and (np.dot(velocityA, -differenceVector) > 0 or np.linalg.norm(velocityA) < np.linalg.norm(velocityB)):
-                hasCollision = False
             
         # Filling Sender Attributes
         for i in range(HyperParameters.MaximumAttributeCount):
@@ -125,8 +114,11 @@ class TestPhysics(PrimitivesPhysics):
         ######### EFFECT
 
         # We take the effects to be the sum of a Force F over time delta-t, i.e. Impuls I = F * delta-t
-        
-        if hasCollision is True:
+        # Even though balls are close, they are going in different directions
+        if not (np.dot(velocityA, differenceVector) < 0 and (np.dot(velocityB, differenceVector) > 0 or np.linalg.norm(velocityB) < np.linalg.norm(velocityA))) and \
+           not (np.dot(velocityB, -differenceVector) < 0 and (np.dot(velocityA, -differenceVector) > 0 or np.linalg.norm(velocityA) < np.linalg.norm(velocityB))) and \
+           hasCollision == True:
+
             tempB = np.dot((velocityB - velocityA), distanceVector) / (math.pow(np.linalg.norm(distanceVector), 2.0))
             resultVelocityB = velocityB - (2 * massSizeA / (massSizeA + massSizeB)) * tempB * distanceVector
             resultAccelB = (resultVelocityB - velocityB) / HyperParameters.TimeStep
@@ -139,6 +131,8 @@ class TestPhysics(PrimitivesPhysics):
             effect[0] = 0.5
             effect[1] = 0.5
             effect[2] = 0.5
+
+
 
         return triplet, effect
 
@@ -169,10 +163,7 @@ class TestPhysics(PrimitivesPhysics):
         # Velocities
         offset = HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount
         for i in range(HyperParameters.MaximumAttributeCount):
-            aggregate[offset + i] = 0.5
-        aggregate[offset + self._xPosOffset] = random.random()
-        aggregate[offset + self._yPosOffset] = random.random()
-        velocity = 2.0 * np.array([aggregate[offset + self._xPosOffset], aggregate[offset + self._yPosOffset]]) - 1.0
+            aggregate[offset + i] = random.random()
 
 
         # Static/Dynamic // Rigid/Elastic
@@ -196,20 +187,20 @@ class TestPhysics(PrimitivesPhysics):
         totalAccel = totalAccel + (np.array([aggregate[offset + 3], aggregate[offset + 4]]) * 2.0 - 1.0) * HyperParameters.AccelerationScale
 
         ######### RECEIVER 
+        offsetV = HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount
         for i in range(HyperParameters.MaximumAttributeCount):
             # Attributes:
-            attributes[i] = aggregate[i]
+            attributes[i] = aggregate[i] + ((aggregate[offsetV + i] * 2.0) - 1.0) * HyperParameters.TimeStep 
+            # For non-Positions
             # Accelerations:
             attributes[HyperParameters.MaximumAttributeCount + i] = 0.5
 
-        attributes[self._xPosOffset] = aggregate[self._xPosOffset] + velocity[0] * HyperParameters.TimeStep 
-        attributes[self._yPosOffset] = aggregate[self._yPosOffset] + velocity[1] * HyperParameters.TimeStep 
-
+        # Only apply force acceleration to position
         attributes[self._xPosOffset] = attributes[self._xPosOffset] + 0.5 * totalAccel[0] * HyperParameters.TimeStep * HyperParameters.TimeStep
         attributes[self._yPosOffset] = attributes[self._yPosOffset] + 0.5 * totalAccel[1] * HyperParameters.TimeStep * HyperParameters.TimeStep
 
-        attributes[HyperParameters.MaximumAttributeCount + self._xPosOffset] = aggregate[offset] + aggregate[offset + 3]
-        attributes[HyperParameters.MaximumAttributeCount + self._yPosOffset] = aggregate[offset + 1] + aggregate[offset + 4]
+        attributes[HyperParameters.MaximumAttributeCount + self._xPosOffset] = ((totalAccel[0] / HyperParameters.AccelerationScale) + 1.0) * 0.5
+        attributes[HyperParameters.MaximumAttributeCount + self._yPosOffset] = ((totalAccel[1] / HyperParameters.AccelerationScale) + 1.0) * 0.5
 
         return aggregate, attributes
 
@@ -316,66 +307,3 @@ class TestPhysics(PrimitivesPhysics):
 
         return triplet, effect
 
-
-    def generateTestInteraction(self, relation : list, effect : list):
-        # Aggregate Format:
-        # Receiver -- Attributes | Symbol | Velocities | Static/Dynamic | Rigid/Elastic
-        # Effects  -- Summed Effect Acceleration Vector | Summed Effect Angle Acceleration Vector
-        # External -- External Acceleration Vector | External Angle Acceleration Vector
-
-        # Attributes Format:
-        # Receiver -- Attributes | Accelerations
-
-        aggregate  = [0.0] * (HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount + HyperParameters.DegreesOfFreedom * 2 + 2) 
-        attributes = [0.0] * HyperParameters.MaximumAttributeCount * 2
-
-
-        ######### AGGREGATE
-        side = HyperParameters.MaximumSymbolCount + HyperParameters.MaximumAttributeCount * 2 + 2
-
-        for i in range(HyperParameters.MaximumAttributeCount):
-            aggregate[i] = relation[HyperParameters.MaximumSymbolCount + side + i]
-        for i in range(HyperParameters.MaximumSymbolCount):
-            aggregate[HyperParameters.MaximumAttributeCount + i] = relation[side + i]
-        offset = HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount
-        for i in range(HyperParameters.MaximumSymbolCount):
-            aggregate[offset + i] = relation[offset + side + i]
-
-        velocity = 2.0 * np.array([aggregate[offset + self._xPosOffset], aggregate[offset + self._yPosOffset]]) - 1.0
-
-        # Static/Dynamic // Rigid/Elastic
-        offset = offset + HyperParameters.MaximumAttributeCount
-        aggregate[offset] = 1.0
-        aggregate[offset + 1] = 0.0
-
-        # Effects
-        offset = offset + 2
-        aggregate[offset] = effect[0]
-        aggregate[offset + 1] = effect[1]
-        aggregate[offset + 2] = effect[2]
-
-        # External
-        aggregate[offset + 3] = 0.5
-        aggregate[offset + 4] = 0.5
-        aggregate[offset + 5] = 0.5
-        
-        totalAccel = (np.array([aggregate[offset], aggregate[offset + 1]]) * 2.0 - 1.0) * HyperParameters.AccelerationScale
-        totalAccel = totalAccel + (np.array([aggregate[offset + 3], aggregate[offset + 4]]) * 2.0 - 1.0) * HyperParameters.AccelerationScale
-
-        ######### RECEIVER ATTRIBUTE
-        for i in range(HyperParameters.MaximumAttributeCount):
-            # Attributes:
-            attributes[i] = aggregate[i]
-            # Accelerations:
-            attributes[HyperParameters.MaximumAttributeCount + i] = 0.5
-
-        attributes[self._xPosOffset] = aggregate[self._xPosOffset] + velocity[0] * HyperParameters.TimeStep 
-        attributes[self._yPosOffset] = aggregate[self._yPosOffset] + velocity[1] * HyperParameters.TimeStep 
-
-        attributes[self._xPosOffset] = attributes[self._xPosOffset] + 0.5 * totalAccel[0] * HyperParameters.TimeStep * HyperParameters.TimeStep
-        attributes[self._yPosOffset] = attributes[self._yPosOffset] + 0.5 * totalAccel[1] * HyperParameters.TimeStep * HyperParameters.TimeStep
-
-        attributes[HyperParameters.MaximumAttributeCount + self._xPosOffset] = aggregate[offset] + aggregate[offset + 3]
-        attributes[HyperParameters.MaximumAttributeCount + self._yPosOffset] = aggregate[offset + 1] + aggregate[offset + 4]
-
-        return aggregate, attributes
