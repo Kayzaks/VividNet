@@ -385,7 +385,7 @@ class Capsule:
                     if capsule.hasAttribute(attribute):
                         perCaps = perCaps + sum(valueList)
                         attrCount = attrCount + len(valueList)
-                # TODO: Missing the Inherited and Mean probability
+                # TODO: Missing the Inherited and Mean probability, however, this only "improves" probability
                 # perCaps = (perCaps / float(max(1, attrCount))) * Utility.windowFunction(observation.getProbability() - 1, 0.0, 1.0)
                 perCaps = (perCaps / float(max(1, attrCount)))
                 total = total + perCaps

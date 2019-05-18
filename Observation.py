@@ -170,7 +170,7 @@ class Observation:
                 velocities[attr] = (value - linkedOutputs[attr]) / timeStep
                 if attr in self._accelerations:
                     velocities[attr] = velocities[attr] + 0.5 * self._accelerations[attr] * timeStep
-                if velocities[attr] < HyperParameters.VelocityCutoff:
+                if abs(velocities[attr]) < HyperParameters.VelocityCutoff:
                     # "Smooth" out small error fluctuations
                     velocities[attr] = 0.0
         return velocities   # {Attribute, Velocity}

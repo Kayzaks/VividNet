@@ -1,4 +1,12 @@
 
+# ------------------------------------------------------------------
+#
+# Note: This is highly un-optimized. It may take several minutes to 
+#       process a single image. The constant context switching 
+#       between rendering and neural networks seems to be the main
+#       culprit.
+
+
 from TestPrimitives import TestPrimitives
 from TestPrimitives import TestRenderer
 from CapsuleNetwork import CapsuleNetwork
@@ -13,9 +21,9 @@ import numpy as np
 import random
 import math
 
-# We restrict our GPU to only use 50%. This has no specific 
-# reason, just to allow us to work in the background without
-# CUDA running out of Memory
+#  We restrict our GPU to only use X %. This has no specific 
+#  reason, just to allow us to work in the background without
+#  CUDA running out of Memory
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 config = tf.ConfigProto()

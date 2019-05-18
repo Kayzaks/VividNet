@@ -114,13 +114,8 @@ class IntuitivePhysics:
                 newObs = Observation(caps, receiverObs.getTakenRoute(), receiverObs.getInputObservations(), attributes, receiverObs.getProbability())
                 newObs.linkPreviousObservation(receiverObs)
                 
-                print("---")
-                print(aggregated)
-
                 for attr, accel in accelerations.items():
                     accelerations[attr] = ((accel * 2.0) - 1.0) * HyperParameters.AccelerationScale
-
-                print(attributes.values())
 
                 newObs.setAccelerations(accelerations)
 
