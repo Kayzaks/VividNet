@@ -40,6 +40,18 @@ class Capsule:
             route.retrain(showDebugOutput, specificSplit)
 
 
+    def getPrimitives(self):
+        # This only works, if all inputs are filled up to the primitve layer
+        # TODO: Do it for other routs than route 0
+        if self._routes[0].getInputCount() == 0:
+            return [self]
+        else:
+            outList = []
+            for inputCaps in self._routes[0].getFromCapsules():
+                outList = outList + inputCaps.getPrimitives()
+            return outList
+
+
     def addPrimitiveRoute(self, fromCapsule, knownGRenderer : PrimitivesRenderer, 
                           knownGPrimitive : Primitives):
         numRoutes = len(self._routes)
@@ -411,3 +423,15 @@ class Capsule:
         # Symmetries from Input
         # TODO: Choose a better route than simply the first...
         return self._routes[0].getSymmetryInverse(attributes)
+
+
+    def getPhysicalProperties(self):
+        # TODO:
+
+        DQ = [1.0, 1.0, 1.0]    # Static = 0.0, Dynamic = 1.0
+        DS = [0.0, 0.0, 0.0]    # Rigid = 0.0,  Elastic/Plastic = 1.0
+
+        if self._name == "Figure8":
+            DQ = [0.0, 0.0, 1.0]
+            
+        return DQ, DS

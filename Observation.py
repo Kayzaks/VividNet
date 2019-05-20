@@ -115,6 +115,10 @@ class Observation:
         self._inputObservations.append(observation)
 
 
+    def clearInputObservations(self):
+        self._inputObservations = []
+
+
     def getCapsule(self):
         return self._capsule
 
@@ -175,5 +179,4 @@ class Observation:
                     velocities[attr] = 0.0
         return velocities   # {Attribute, Velocity}
 
-    
 

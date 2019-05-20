@@ -35,7 +35,7 @@ class TestPhysics(PrimitivesPhysics):
         effect  = [0.0] * HyperParameters.DegreesOfFreedom
 
         ######### TRIPLET
-        totalObjectEntries = (HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2)
+        totalObjectEntries = (HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2 * HyperParameters.DegreesOfFreedom)
         
         if random.randint(0, 100) % 2 == 0:
             triplet[2 * totalObjectEntries] = random.random() * HyperParameters.DistanceCutoff
@@ -59,7 +59,8 @@ class TestPhysics(PrimitivesPhysics):
 
         velocityA = random.random() * np.array([differenceVector[0] * math.cos(offRotA) - differenceVector[1] * math.sin(offRotA), differenceVector[0] * math.cos(offRotA) + differenceVector[1] * math.sin(offRotA)])
         velocityB = random.random() * np.array([-differenceVector[0] * math.cos(offRotB) + differenceVector[1] * math.sin(offRotB), -differenceVector[0] * math.cos(offRotB) - differenceVector[1] * math.sin(offRotB)])
-
+        vMagA = random.random()
+        vMagB = random.random()
             
         # Filling Sender Attributes
         for i in range(HyperParameters.MaximumAttributeCount):
@@ -79,26 +80,53 @@ class TestPhysics(PrimitivesPhysics):
         
         # Filling Sender Velocity
         for i in range(HyperParameters.MaximumAttributeCount):
-            triplet[HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount + i] = 0.5
+            triplet[HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount + i] = random.random()
         triplet[HyperParameters.MaximumSymbolCount + HyperParameters.MaximumAttributeCount + self._xPosOffset] = (velocityA[0] + 1.0) / 2.0
         triplet[HyperParameters.MaximumSymbolCount + HyperParameters.MaximumAttributeCount + self._yPosOffset] = (velocityA[1] + 1.0) / 2.0
+        triplet[HyperParameters.MaximumSymbolCount + HyperParameters.MaximumAttributeCount + self._rotOffset] = vMagA
         
         # Filling Receiver Velocity
         for i in range(HyperParameters.MaximumAttributeCount):
-            triplet[totalObjectEntries + HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount + i] = 0.5
+            triplet[totalObjectEntries + HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount + i] = random.random()
         triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + HyperParameters.MaximumAttributeCount + self._xPosOffset] = (velocityB[0] + 1.0) / 2.0
         triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + HyperParameters.MaximumAttributeCount + self._yPosOffset] = (velocityB[1] + 1.0) / 2.0
+        triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + HyperParameters.MaximumAttributeCount + self._rotOffset] = vMagB
 
-        # TODO:  The following are fixed for testing only Circles with Dynamic, Rigid Collisions:
-        # Circle
-        triplet[0] = 1.0
-        triplet[totalObjectEntries] = 1.0
+        # Train for all Symbols
+        triplet[random.randint(0, HyperParameters.MaximumSymbolCount)] = 1.0
+        triplet[totalObjectEntries + random.randint(0, HyperParameters.MaximumSymbolCount)] = 1.0
         # Static / Dynamic
-        triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = 1.0
-        triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = 1.0
+        # For testing purposes, we also train the case, where the receiver can only rotate
+        windmill = random.randint(0, 100)
+
+        if windmill >= 75:
+            triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = 1.0
+            triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = 1.0
+            triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2] = 1.0
+            triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = 0.0
+            triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = 0.0
+            triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2] = 1.0
+        elif windmill >= 50:
+            triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = 0.0
+            triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = 0.0
+            triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2] = 1.0
+            triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = 1.0
+            triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = 1.0
+            triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2] = 1.0            
+        else:
+            triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = 1.0
+            triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = 1.0
+            triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2] = 1.0
+            triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = 1.0
+            triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = 1.0
+            triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2] = 1.0
         # Rigid / Elastic
-        triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = 0.0
-        triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = 0.0
+        triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 3] = 0.0
+        triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 4] = 0.0
+        triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 5] = 0.0
+        triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 3] = 0.0
+        triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 4] = 0.0
+        triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 5] = 0.0
         # Degrees-Of-Freedom
         triplet[2 * totalObjectEntries + 1] = 1.0
         triplet[2 * totalObjectEntries + 2] = 1.0
@@ -115,18 +143,36 @@ class TestPhysics(PrimitivesPhysics):
 
         # We take the effects to be the sum of a Force F over time delta-t, i.e. Impuls I = F * delta-t
         # Even though balls are close, they are going in different directions
+        
+        if windmill >= 75:
+            # Ball - Windmill interaction.
+            # This is not real physics, just something that simulates plausible looking interactions. If we knew the real physics anyways,
+            # we could just implement that.
+
+            # Fake linear momentums from angular momentums.
+            vMagB = ((vMagB * 2.0) - 1.0) / (massSizeB * 0.5)
+            velocityB = vMagB * np.array([-differenceVector[1], differenceVector[0]])
+            massSizeA = massSizeA * massSizeB / 2.0
+            massSizeB = massSizeB * massSizeB / 6.0
+
         if not (np.dot(velocityA, differenceVector) < 0 and (np.dot(velocityB, differenceVector) > 0 or np.linalg.norm(velocityB) < np.linalg.norm(velocityA))) and \
-           not (np.dot(velocityB, -differenceVector) < 0 and (np.dot(velocityA, -differenceVector) > 0 or np.linalg.norm(velocityA) < np.linalg.norm(velocityB))) and \
-           hasCollision == True:
+            not (np.dot(velocityB, -differenceVector) < 0 and (np.dot(velocityA, -differenceVector) > 0 or np.linalg.norm(velocityA) < np.linalg.norm(velocityB))) and \
+            hasCollision == True:
 
             tempB = np.dot((velocityB - velocityA), distanceVector) / (math.pow(np.linalg.norm(distanceVector), 2.0))
             resultVelocityB = velocityB - (2 * massSizeA / (massSizeA + massSizeB)) * tempB * distanceVector
             resultAccelB = (resultVelocityB - velocityB) / HyperParameters.TimeStep
 
-            # Scaling the Force Vectors
-            effect[0] = (resultAccelB[0] / HyperParameters.AccelerationScale + 1.0) / 2.0
-            effect[1] = (resultAccelB[1] / HyperParameters.AccelerationScale + 1.0) / 2.0
-            effect[2] = 0.5
+            if windmill >= 75:
+                angDir = np.array([-differenceVector[1], differenceVector[0]])
+                effect[0] = 0.5
+                effect[1] = 0.5
+                effect[2] = ((np.linalg.norm(resultAccelB * angDir) / HyperParameters.AccelerationScale) + 1.0) / 2.0
+            else:
+                # Scaling the Force Vectors
+                effect[0] = ((resultAccelB[0] / HyperParameters.AccelerationScale) + 1.0) / 2.0
+                effect[1] = ((resultAccelB[1] / HyperParameters.AccelerationScale) + 1.0) / 2.0
+                effect[2] = 0.5
         else:
             effect[0] = 0.5
             effect[1] = 0.5
@@ -146,7 +192,7 @@ class TestPhysics(PrimitivesPhysics):
         # Attributes Format:
         # Receiver -- Attributes | Accelerations
 
-        aggregate  = [0.0] * (HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount + HyperParameters.DegreesOfFreedom * 2 + 2) 
+        aggregate  = [0.0] * (HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount + HyperParameters.DegreesOfFreedom * 4) 
         attributes = [0.0] * HyperParameters.MaximumAttributeCount * 2
 
 
@@ -157,8 +203,7 @@ class TestPhysics(PrimitivesPhysics):
         aggregate[self._arOffset] = 1.0
 
         # Symbol
-        # TODO: Just a Circle
-        aggregate[HyperParameters.MaximumAttributeCount] = 1.0
+        aggregate[HyperParameters.MaximumAttributeCount + random.randint(0, HyperParameters.MaximumSymbolCount)] = 1.0
 
         # Velocities
         offset = HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount
@@ -168,23 +213,28 @@ class TestPhysics(PrimitivesPhysics):
 
         # Static/Dynamic // Rigid/Elastic
         offset = offset + HyperParameters.MaximumAttributeCount
-        aggregate[offset] = 1.0
-        aggregate[offset + 1] = 0.0
+
+        aggregate[offset] = float(random.randint(0, 1))
+        aggregate[offset + 1] = float(random.randint(0, 1))
+        aggregate[offset + 2] = float(random.randint(0, 1))
+        aggregate[offset + 3] = 0.0
+        aggregate[offset + 4] = 0.0
+        aggregate[offset + 5] = 0.0
 
         # Effects
-        offset = offset + 2
+        offset = offset + 2 * HyperParameters.DegreesOfFreedom
         aggregate[offset] = random.random()
         aggregate[offset + 1] = random.random()
-        aggregate[offset + 2] = 0.5
+        aggregate[offset + 2] = random.random()
 
         # External
         aggregate[offset + 3] = random.random()
         aggregate[offset + 4] = random.random()
-        aggregate[offset + 5] = 0.5
+        aggregate[offset + 5] = random.random()
 
 
-        totalAccel = (np.array([aggregate[offset], aggregate[offset + 1]]) * 2.0 - 1.0) * HyperParameters.AccelerationScale
-        totalAccel = totalAccel + (np.array([aggregate[offset + 3], aggregate[offset + 4]]) * 2.0 - 1.0) * HyperParameters.AccelerationScale
+        totalAccel = (np.array([aggregate[offset], aggregate[offset + 1], aggregate[offset + 2]]) * 2.0 - 1.0) * HyperParameters.AccelerationScale
+        totalAccel = totalAccel + (np.array([aggregate[offset + 3], aggregate[offset + 4], aggregate[offset + 5]]) * 2.0 - 1.0) * HyperParameters.AccelerationScale
 
         ######### RECEIVER 
         offsetV = HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount
@@ -195,11 +245,26 @@ class TestPhysics(PrimitivesPhysics):
             # Accelerations:
             attributes[HyperParameters.MaximumAttributeCount + i] = 0.5
 
-        # Only apply force acceleration to position
+        # Only apply force acceleration to position and rotation
         attributes[self._xPosOffset] = attributes[self._xPosOffset] + 0.5 * totalAccel[0] * HyperParameters.TimeStep * HyperParameters.TimeStep
         attributes[self._yPosOffset] = attributes[self._yPosOffset] + 0.5 * totalAccel[1] * HyperParameters.TimeStep * HyperParameters.TimeStep
-
+        attributes[self._rotOffset] = attributes[self._rotOffset] + 0.5 * totalAccel[2] * HyperParameters.TimeStep * HyperParameters.TimeStep
+        
         attributes[HyperParameters.MaximumAttributeCount + self._xPosOffset] = ((totalAccel[0] / HyperParameters.AccelerationScale) + 1.0) * 0.5
         attributes[HyperParameters.MaximumAttributeCount + self._yPosOffset] = ((totalAccel[1] / HyperParameters.AccelerationScale) + 1.0) * 0.5
+        attributes[HyperParameters.MaximumAttributeCount + self._rotOffset] = ((totalAccel[2] / HyperParameters.AccelerationScale) + 1.0) * 0.5
+
+        # Static.. Undo changes
+        if aggregate[2 * HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount] < 0.1:
+            attributes[self._xPosOffset] = aggregate[self._xPosOffset]
+            attributes[HyperParameters.MaximumAttributeCount + self._xPosOffset] = 0.5
+        if aggregate[2 * HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount + 1] < 0.1:
+            attributes[self._yPosOffset] = aggregate[self._yPosOffset]
+            attributes[HyperParameters.MaximumAttributeCount + self._yPosOffset] = 0.5
+        if aggregate[2 * HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount + 2] < 0.1:
+            attributes[self._rotOffset] = aggregate[self._rotOffset]
+            attributes[HyperParameters.MaximumAttributeCount + self._rotOffset] = 0.5
+
+
 
         return aggregate, attributes

@@ -24,7 +24,7 @@ class IntuitivePhysics:
             
 
     def getAggregateDimension(self):
-        return HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount  + HyperParameters.DegreesOfFreedom * 2 + 2
+        return HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount + HyperParameters.DegreesOfFreedom * 4
     
 
     def aggregate(self, effects : list, external : list, observation : Observation):
@@ -54,20 +54,26 @@ class IntuitivePhysics:
                 aggregated[HyperParameters.MaximumAttributeCount + HyperParameters.MaximumSymbolCount + pos] = (value + 1.0) * 0.5
 
         # Static/Dynamic + Rigid/Elastic
-        # TODO:
-        aggregated[HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount] = 1.0
-        aggregated[HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount + 1] = 0.0
+        DQ, DS = observation.getCapsule().getPhysicalProperties()
+        aggregated[HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount] = DQ[0]
+        aggregated[HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount + 1] = DQ[1]
+        aggregated[HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount + 2] = DQ[2]
+
+        aggregated[HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount + 3] = DS[0]
+        aggregated[HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount + 4] = DS[1]
+        aggregated[HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount + 5] = DS[2]
 
         # Effects
+        offset = HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.DegreesOfFreedom
         for i in range(HyperParameters.DegreesOfFreedom):
             summed = 0.0
             for effect in effects:
                 summed = summed + ((effect[i] * 2.0) - 1.0)
-            aggregated[HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount + 2 + i] = (summed + 1.0) * 0.5   
+            aggregated[offset + i] = (summed + 1.0) * 0.5   
             
         # External Effects
         for i in range(HyperParameters.DegreesOfFreedom):
-            aggregated[HyperParameters.MaximumAttributeCount * 2 + HyperParameters.MaximumSymbolCount + HyperParameters.DegreesOfFreedom + 2 + i] = external[i]
+            aggregated[offset + HyperParameters.DegreesOfFreedom + i] = external[i]
 
         return aggregated     # Object Attributes + Symbol + Velocities + Static/Dynamic + Rigid/Elastic + Effects + External Effects
 

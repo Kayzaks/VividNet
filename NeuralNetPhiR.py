@@ -10,7 +10,7 @@ from keras import backend
 class NeuralNetPhiR(NeuralNet):
 
     def beginTraining(self):
-        self.setTrainingParameters(400000, 1000, 4, 10)
+        self.setTrainingParameters(40000, 1000, 16, 100)
         
         
     def defineModel(self, inputShape : tuple, outputSize : int):

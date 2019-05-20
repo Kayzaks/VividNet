@@ -8,7 +8,8 @@ class RelationTriplet:
 
     @staticmethod
     def tripletLength():
-        return (2 * (HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2) + (1 + HyperParameters.DegreesOfFreedom + 2 * HyperParameters.Dimensions))
+        return (2 * (HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2 * HyperParameters.DegreesOfFreedom) \
+             + (1 + HyperParameters.DegreesOfFreedom + 2 * HyperParameters.Dimensions))
 
 
     @staticmethod
@@ -36,7 +37,7 @@ class RelationTriplet:
         # Receiver -- Symbol | Attributes | Velocities | Static/Dynamic | Rigid/Elastic 
         # Relation -- Distance | Degrees-Of-Freedom | Sender Normal | Receiver Normal
         
-        totalObjectEntries = (HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2)
+        totalObjectEntries = (HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2 * HyperParameters.DegreesOfFreedom)
         triplet = [0.0] * RelationTriplet.tripletLength()
 
         # Symbols
@@ -61,15 +62,24 @@ class RelationTriplet:
                 triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + HyperParameters.MaximumAttributeCount + pos] = (receiverVelocities[outputAttribute] + 1.0) * 0.5
 
 
+        DQA, DSA = senderObservation.getCapsule().getPhysicalProperties()
+        DQB, DSB = receiverObservation.getCapsule().getPhysicalProperties()
+
         # Static / Dynamic
-        # TODO:
-        triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = 1.0
-        triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = 1.0
+        triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = DQA[0]
+        triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = DQA[1]
+        triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2] = DQA[2]
+        triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = DQB[0]
+        triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = DQB[1]
+        triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2] = DQB[2]
 
         # Rigid / Elastic
-        # TODO:
-        triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = 0.0
-        triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = 0.0
+        triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 3] = DSA[0]
+        triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 4] = DSA[1]
+        triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 5] = DSA[2]
+        triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 3] = DSB[0]
+        triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 4] = DSB[1]
+        triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 5] = DSB[2]
 
         # Distance
         dist, norm1, norm2 = capsNet.distance(senderObservation, receiverObservation)

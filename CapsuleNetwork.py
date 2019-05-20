@@ -387,17 +387,39 @@ class CapsuleNetwork:
         return image, semantics, texts    # Linear List of Pixels
 
 
+    def producePrimitiveObservations(self, observation : Observation):
+        if observation.getCapsule() not in self._primitiveCapsules:
+            outputObsList = []
+            if not observation.getInputObservations():
+                newObsDict = observation.getCapsule().backwardPass(observation, False)
+                observation.clearInputObservations()
+                for newObsList in newObsDict.values():
+                    for newObs in newObsList:
+                        outputObsList = outputObsList + self.producePrimitiveObservations(newObs)
+            else:
+                for newObs in observation.getInputObservations():
+                    outputObsList = outputObsList + self.producePrimitiveObservations(newObs)
+            return outputObsList    # List of Observations for Primitive Capsules
+        else:
+            return [observation]    # List of Observation for this Primitive Capsules
+
+
     def distance(self, observationA : Observation, observationB : Observation):
-        distance = 0.0
+        distance = 100.0
         normal1 = [0.0, 0.0]
         normal2 = [0.0, 0.0]
-        
-        if observationA.getCapsule() in self._primitiveCapsules:
-            distance, normal1, normal2 = self._renderer.getDistance(
-                    self._capsulePrimitive[observationA.getCapsule()], self._capsulePrimitive[observationB.getCapsule()],
-                    observationA.getOutputs(), observationB.getOutputs())
 
+        compareA = self.producePrimitiveObservations(observationA)
+        compareB = self.producePrimitiveObservations(observationB)
 
-        # TODO: Semantic Capsules
+        for primA in compareA:
+            for primB in compareB:
+                    testDistance, testNormal1, testNormal2 = self._renderer.getDistance(
+                        self._capsulePrimitive[primA.getCapsule()], self._capsulePrimitive[primB.getCapsule()],
+                        primA.getOutputs(), primB.getOutputs())
+                    if testDistance < distance:
+                        distance = testDistance
+                        normal1 = testNormal1
+                        normal2 = testNormal2
 
         return distance, normal1, normal2

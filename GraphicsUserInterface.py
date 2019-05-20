@@ -5,6 +5,7 @@ import matplotlib.patches as patches
 import matplotlib.animation as animation
 from matplotlib.widgets import TextBox
 import numpy
+import scipy.misc
 
 class GraphicsUserInterface:
         
@@ -98,22 +99,22 @@ class GraphicsUserInterface:
     
         
 
-    def drawMovie(self, frames : list, width : int, height : int, deltaT : float):
+    def drawMovie(self, frames : list, width : int, height : int, deltaT : float, save : bool):
         # frames        # List of List of Pixels
 
         fig = plt.figure()
 
         images = []
-        for frame in frames:
+        for idx, frame in enumerate(frames):
+            imageData = numpy.reshape(frame, [height, width, 3])
             newImage = plt.imshow(numpy.reshape(frame, [height, width, 3]))
             images.append([newImage])
+
+            if save is True:
+                scipy.misc.imsave("videoframe" + str(idx) + ".png", imageData)
 
         fullAnim = animation.ArtistAnimation(fig, images, interval=deltaT * 1000, repeat_delay=0,
                                         blit=True)
                       
-        #Writer = animation.writers['ffmpeg']
-        #writer = Writer(fps=int(1 / deltaT), metadata=dict(artist='VividNet'), bitrate=1800)                  
-        #fullAnim.save('fullAnim.mp4', writer= writer)
-
         plt.show()
     
