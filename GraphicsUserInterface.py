@@ -21,8 +21,26 @@ class GraphicsUserInterface:
         return totList # List of (Observation , patches.Rectangle)
 
 
+    def loadImage(self, filename : str):
+        image = scipy.misc.imread(filename)
+
+        width = len(image)
+        height = len(image[0])
+
+        outImage = [0.0] * width * height * 4
+
+        for yy in range(height):
+            for xx in range(width):
+                outImage[(yy * width + xx) * 4] = float(image[yy][xx][0]) / 255.0
+                outImage[(yy * width + xx) * 4 + 1] = float(image[yy][xx][1]) / 255.0
+                outImage[(yy * width + xx) * 4 + 2] = float(image[yy][xx][2]) / 255.0
+                outImage[(yy * width + xx) * 4 + 3] = 0.0
+
+        return outImage
+
+
     def draw(self, pixels1 : list, pixels2 : list, width1 : int, height1 : int, width2 : int, height2 : int, 
-                         semantics : dict, texts : list, lambdaTrain):
+                         semantics : dict, texts : list, lambdaTrain, save : bool = False):
         # semantics    # Observation - List of Semantics
 
         selectedObs = []
@@ -63,7 +81,8 @@ class GraphicsUserInterface:
             newName[0] = text
 
         fig, axarr = plt.subplots(1,3)
-        axarr[0].imshow(numpy.reshape(pixels1, [height1, width1, 3]))
+        imageData = numpy.reshape(pixels1, [height1, width1, 3])
+        axarr[0].imshow(imageData)
         axarr[1].imshow(numpy.reshape(pixels2, [height2, width2, 3]))
         axarr[2].imshow(numpy.reshape(pixels2, [height2, width2, 3]))
         axarr[0].set_axis_off()
@@ -80,6 +99,8 @@ class GraphicsUserInterface:
         for text in texts:
             axarr[2].text(text[0], text[1], text[2], color = 'y', fontsize=8)
 
+        if save is True:
+            scipy.misc.imsave("scene.png", imageData)
 
         fig.canvas.mpl_connect('button_press_event', mouseClick)
         axbtn = plt.axes([0.81, 0.05, 0.1, 0.075])

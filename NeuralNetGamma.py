@@ -10,7 +10,7 @@ from keras import backend
 class NeuralNetGamma(NeuralNet):
 
     def beginTraining(self):
-        self.setTrainingParameters(100000, 5000, 4, 10)
+        self.setTrainingParameters(100000, 5000, 16, 10)
 
 
     def defineModel(self, inputShape : tuple, outputSize : int):

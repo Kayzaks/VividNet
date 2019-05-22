@@ -154,6 +154,12 @@ class TestPhysics(PrimitivesPhysics):
             velocityB = vMagB * np.array([-differenceVector[1], differenceVector[0]])
             massSizeA = massSizeA * massSizeB / 2.0
             massSizeB = massSizeB * massSizeB / 6.0
+        elif windmill >= 50:
+            vMagA = ((vMagA * 2.0) - 1.0) / (massSizeA * 0.5)
+            velocityA = vMagA * np.array([-differenceVector[1], differenceVector[0]])
+            massSizeB = massSizeA * massSizeB / 2.0
+            massSizeA = massSizeA * massSizeA / 6.0
+
 
         if not (np.dot(velocityA, differenceVector) < 0 and (np.dot(velocityB, differenceVector) > 0 or np.linalg.norm(velocityB) < np.linalg.norm(velocityA))) and \
             not (np.dot(velocityB, -differenceVector) < 0 and (np.dot(velocityA, -differenceVector) > 0 or np.linalg.norm(velocityA) < np.linalg.norm(velocityB))) and \

@@ -187,7 +187,7 @@ class CapsuleRoute:
             self.retrain()
 
 
-    def retrain(self, showDebugOutput = True, specificSplit : list = None):
+    def retrain(self, showDebugOutput : bool = True, specificSplit : list = None):
         if self._isSemanticCapsule is True:
             self._neuralNetG.trainFromData(self._memory, showDebugOutput, specificSplit)
         else:
@@ -233,7 +233,7 @@ class CapsuleRoute:
             for attr, valueList in agreement.items():
                 agreementSum += sum(valueList)
                 totLen += len(valueList)
-            agreementSum = agreementSum / totLen
+            agreementSum = agreementSum / max(1, totLen)
 
             # TODO: This is only for 1 Axis! 
             if agreementSum > HyperParameters.SymmetryCutOff:

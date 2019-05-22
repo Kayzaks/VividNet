@@ -105,8 +105,8 @@ venv.bak/
 
 # Keras / Tensorflow stuff
 logs/
-Models/
 Tests/
+*.h5
 
 # Testing and Old stuff
 XTest.py

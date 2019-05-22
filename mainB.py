@@ -76,30 +76,19 @@ if __name__ == '__main__':
 
 
 
-    APos = np.array([0.2, 0.2])
-    AVel = np.array([0.4, 0.6])
-    AMass = 0.2
-
-    BPos = np.array([0.8, 0.2])
-    BVel = np.array([-0.4, 0.4])
-    BMass = 0.3
-
-    CPos = np.array([0.3, 0.85])
-    CVel = np.array([0.0, -0.2])
-    CMass = 0.2
 
 
-
-
-
-    APos = np.array([0.2, 0.4])
-    AVel = np.array([0.6, 0.0])
-    AMass = 0.2
+    APos = np.array([0.2, 0.5])
+    AVel = np.array([0.6, -0.4])
+    AMass = 0.3
 
     BPos = np.array([0.6, 0.5])
     BVel = np.array([0.0, 0.0])
     BMass = 0.2
 
+    CPos = np.array([0.3, 0.85])
+    CVel = np.array([0.0, -0.2])
+    CMass = 0.2
 
 
     obsDicts = []        
@@ -179,6 +168,6 @@ if __name__ == '__main__':
     
     drawFrames = physics.render(vividNet._capsuleNetwork, framesSim, shape[0], shape[1])
 
-    testUI.drawMovie(drawFrames, shape[0], shape[1], HyperParameters.TimeStep, False)
+    testUI.drawMovie(drawFrames, shape[0], shape[1], HyperParameters.TimeStep, True)
 
 
