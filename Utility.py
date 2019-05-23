@@ -135,19 +135,20 @@ class Utility:
             
 
     @staticmethod
-    def loadPNGGreyscale(filename : str):
-        image = misc.imread(filename, "L")
-        outputShape = image.shape
-        image = np.asarray(image).astype(np.float32).flatten() / 255.0
+    def loadImage(filename : str):
+        image = misc.imread(filename)
 
-        output = np.zeros(outputShape[0] * outputShape[1] * 4)
+        width = len(image)
+        height = len(image[0])
 
-        for idx in range(outputShape[0] * outputShape[1]):
-            output[idx * 4] = image[idx]
-            output[idx * 4 + 1] = image[idx]
-            output[idx * 4 + 2] = image[idx]
-            output[idx * 4 + 3] = image[idx]
+        outImage = [0.0] * width * height * 4
 
-        return (output, (outputShape[1], outputShape[0]))
+        for yy in range(height):
+            for xx in range(width):
+                outImage[(yy * width + xx) * 4] = float(image[yy][xx][0]) / 255.0
+                outImage[(yy * width + xx) * 4 + 1] = float(image[yy][xx][1]) / 255.0
+                outImage[(yy * width + xx) * 4 + 2] = float(image[yy][xx][2]) / 255.0
+                outImage[(yy * width + xx) * 4 + 3] = 0.0
 
+        return outImage, width, height
         

@@ -68,7 +68,6 @@ class TestPhysics(PrimitivesPhysics):
         triplet[HyperParameters.MaximumSymbolCount + self._xPosOffset] = positionA[0]
         triplet[HyperParameters.MaximumSymbolCount + self._yPosOffset] = positionA[1]
         triplet[HyperParameters.MaximumSymbolCount + self._sizeOffset] = massSizeA
-        triplet[HyperParameters.MaximumSymbolCount + self._arOffset] = 1.0
         
         # Filling Receiver Attributes
         for i in range(HyperParameters.MaximumAttributeCount):
@@ -76,7 +75,6 @@ class TestPhysics(PrimitivesPhysics):
         triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + self._xPosOffset] = positionB[0]
         triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + self._yPosOffset] = positionB[1]
         triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + self._sizeOffset] = massSizeB
-        triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + self._arOffset] = 1.0
         
         # Filling Sender Velocity
         for i in range(HyperParameters.MaximumAttributeCount):
@@ -93,8 +91,10 @@ class TestPhysics(PrimitivesPhysics):
         triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + HyperParameters.MaximumAttributeCount + self._rotOffset] = vMagB
 
         # Train for all Symbols
-        triplet[random.randint(0, HyperParameters.MaximumSymbolCount)] = 1.0
-        triplet[totalObjectEntries + random.randint(0, HyperParameters.MaximumSymbolCount)] = 1.0
+        senderSymbol = random.randint(0, HyperParameters.MaximumSymbolCount)
+        receiverSymbol = random.randint(0, HyperParameters.MaximumSymbolCount)
+        triplet[senderSymbol] = 1.0
+        triplet[totalObjectEntries + receiverSymbol] = 1.0
         # Static / Dynamic
         # For testing purposes, we also train the case, where the receiver can only rotate
         windmill = random.randint(0, 100)
@@ -106,13 +106,19 @@ class TestPhysics(PrimitivesPhysics):
             triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = 0.0
             triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = 0.0
             triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2] = 1.0
+            triplet[totalObjectEntries + receiverSymbol] = 0.0
+            # Figure 8
+            triplet[totalObjectEntries + 3] = 1.0
         elif windmill >= 50:
             triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = 0.0
             triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = 0.0
             triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2] = 1.0
             triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = 1.0
             triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = 1.0
-            triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2] = 1.0            
+            triplet[totalObjectEntries + HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 2] = 1.0     
+            triplet[senderSymbol] = 0.0
+            # Figure 8
+            triplet[3] = 1.0      
         else:
             triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount] = 1.0
             triplet[HyperParameters.MaximumSymbolCount + 2 * HyperParameters.MaximumAttributeCount + 1] = 1.0
@@ -206,7 +212,6 @@ class TestPhysics(PrimitivesPhysics):
         # Attributes
         for i in range(HyperParameters.MaximumAttributeCount):
             aggregate[i] = random.random()
-        aggregate[self._arOffset] = 1.0
 
         # Symbol
         aggregate[HyperParameters.MaximumAttributeCount + random.randint(0, HyperParameters.MaximumSymbolCount)] = 1.0

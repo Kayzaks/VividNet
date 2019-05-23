@@ -29,3 +29,4 @@ class HyperParameters:
     AccelerationScale = 10.0 
     VelocityCutoff = 0.1 # 0.2
     DistanceCutoff = 0.01
+    ContinuityCutoff = TimeStep * 1.5

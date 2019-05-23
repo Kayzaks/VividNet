@@ -92,6 +92,32 @@ class Observation:
         print("-------------------------")
 
 
+    def printContinuity(self, includeNonInheritable : bool):
+        if self._previousObservation is None:
+            leftPad = " ".ljust(40)
+            leftArrow = " ".ljust(30) + " -----> ".ljust(10)
+            print(leftArrow + self._capsule.getName())
+            print(leftPad + "Probability - " + str(int(self._outputProbability * 100)) + "%")
+            for attribute, value in self._outputAttributes.items():
+                if includeNonInheritable is True or attribute.isInheritable() is True:
+                    print(leftPad + attribute.getName() + ": " + str(value))
+            print(leftPad + "-------------------------")
+        else:
+            prevOb = self._previousObservation
+            leftArrow = prevOb._capsule.getName().ljust(30) + " -----> ".ljust(10)
+            print(leftArrow + self._capsule.getName())
+            leftPad = "Probability - " + str(int(prevOb._outputProbability * 100)) + "%"
+            leftPad = leftPad.ljust(40)
+            print(leftPad + "Probability - " + str(int(self._outputProbability * 100)) + "%")
+            for attribute, value in self._outputAttributes.items():
+                if includeNonInheritable is True or attribute.isInheritable() is True:
+                    leftPad = attribute.getName() + ": " + str(prevOb._outputAttributes[attribute])
+                    leftPad = leftPad.ljust(40)
+                    print(leftPad + attribute.getName() + ": " + str(value))
+            leftPad = "-------------------------".ljust(40)
+            print(leftPad + "-------------------------")
+
+
     def getProbability(self):
         return self._outputProbability
 
@@ -157,6 +183,13 @@ class Observation:
 
     def linkPreviousObservation(self, observation):
         self._previousObservation = observation
+
+
+    def hasPreviousObservation(self):
+        if self._previousObservation is None:
+            return False
+        else:
+            return True
 
 
     def setAccelerations(self, accelerations : dict):

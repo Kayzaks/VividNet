@@ -426,12 +426,15 @@ class Capsule:
 
 
     def getPhysicalProperties(self):
-        # TODO:
+
 
         DQ = [1.0, 1.0, 1.0]    # Static = 0.0, Dynamic = 1.0
         DS = [0.0, 0.0, 0.0]    # Rigid = 0.0,  Elastic/Plastic = 1.0
 
+        # TODO: Capsule Memory has not been implemented yet.
+        #       Instead, we take the Degrees-Of-Freedom for
+        #       the Figure8 as given
         if self._name == "Figure8":
             DQ = [0.0, 0.0, 1.0]
-            
+
         return DQ, DS

@@ -21,25 +21,7 @@ class GraphicsUserInterface:
         return totList # List of (Observation , patches.Rectangle)
 
 
-    def loadImage(self, filename : str):
-        image = scipy.misc.imread(filename)
-
-        width = len(image)
-        height = len(image[0])
-
-        outImage = [0.0] * width * height * 4
-
-        for yy in range(height):
-            for xx in range(width):
-                outImage[(yy * width + xx) * 4] = float(image[yy][xx][0]) / 255.0
-                outImage[(yy * width + xx) * 4 + 1] = float(image[yy][xx][1]) / 255.0
-                outImage[(yy * width + xx) * 4 + 2] = float(image[yy][xx][2]) / 255.0
-                outImage[(yy * width + xx) * 4 + 3] = 0.0
-
-        return outImage
-
-
-    def draw(self, pixels1 : list, pixels2 : list, width1 : int, height1 : int, width2 : int, height2 : int, 
+    def draw(self, imageReal : list, imageObserved : list, width1 : int, height1 : int, width2 : int, height2 : int, 
                          semantics : dict, texts : list, lambdaTrain, save : bool = False):
         # semantics    # Observation - List of Semantics
 
@@ -79,6 +61,22 @@ class GraphicsUserInterface:
 
         def onTextSubmit(text):
             newName[0] = text
+
+        pixels1 = [0.0] * (width1 * height1 * 3)
+        pixels2 = [0.0] * (width2 * height2 * 3)
+        
+        for yy in range(height1):
+            for xx in range(width1):
+                pixels1[(yy * width1 + xx) * 3] = imageReal[(yy * width1 + xx) * 4]
+                pixels1[(yy * width1 + xx) * 3 + 1] = imageReal[(yy * width1 + xx) * 4]
+                pixels1[(yy * width1 + xx) * 3 + 2] = imageReal[(yy * width1 + xx) * 4]
+
+        for yy in range(height2):
+            for xx in range(width2):
+                pixels2[(yy * width2 + xx) * 3] = imageObserved[(yy * width2 + xx) * 4]
+                pixels2[(yy * width2 + xx) * 3 + 1] = imageObserved[(yy * width2 + xx) * 4]
+                pixels2[(yy * width2 + xx) * 3 + 2] = imageObserved[(yy * width2 + xx) * 4]
+
 
         fig, axarr = plt.subplots(1,3)
         imageData = numpy.reshape(pixels1, [height1, width1, 3])
@@ -127,8 +125,16 @@ class GraphicsUserInterface:
 
         images = []
         for idx, frame in enumerate(frames):
-            imageData = numpy.reshape(frame, [height, width, 3])
-            newImage = plt.imshow(numpy.reshape(frame, [height, width, 3]))
+            pixels = [0.0] * (width * height * 3)
+            
+            for yy in range(height):
+                for xx in range(width):
+                    pixels[(yy * width + xx) * 3] = frame[(yy * width + xx) * 4]
+                    pixels[(yy * width + xx) * 3 + 1] = frame[(yy * width + xx) * 4]
+                    pixels[(yy * width + xx) * 3 + 2] = frame[(yy * width + xx) * 4]
+
+            imageData = numpy.reshape(pixels, [height, width, 3])
+            newImage = plt.imshow(imageData)
             images.append([newImage])
 
             if save is True:

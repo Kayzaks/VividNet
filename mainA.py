@@ -42,17 +42,16 @@ if __name__ == '__main__':
     capsNet = CapsuleNetwork()
     capsNet.setRenderer(TestRenderer)
 
-    width = 28                  # Width of the Primitive Capsule Input
-    height = 28                 # Height of the Primitive Capsule Input
-    shape = (84, 84)            # Total Size of the Image
+    primWidth = 28              # Width of the Primitive Capsule Input
+    primHeight = 28             # Height of the Primitive Capsule Input2
     
     retrain = 1                 # After initial Training (2 loops), set this to 0 to avoid
                                 # retraining each run
 
     # Set-up of Primitive Capsules
-    squareCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Square, [(width, height)], retrain)
-    circleCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Circle, [(width, height)], retrain) 
-    triangleCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Triangle, [(width, height)], retrain) 
+    squareCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Square, [(primWidth, primHeight)], retrain)
+    circleCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Circle, [(primWidth, primHeight)], retrain) 
+    triangleCapsule = capsNet.addPrimitiveCapsule(TestPrimitives.Triangle, [(primWidth, primHeight)], retrain) 
 
 
     # We dont have a file-format to save the structure of the capsule network yet, so we 
@@ -120,13 +119,13 @@ if __name__ == '__main__':
 
     for i in range(3):
         # Load the test image
-        imageReal = testUI.loadImage("scene" + str(i) + ".png")
+        imageReal, width, height = Utility.loadImage("Examples/Ascene" + str(i) + ".png") 
 
         # Feed-Forward Pass through the Network
-        allObs = capsNet.showInput(imageReal, shape[0], shape[1], 1)
+        allObs = capsNet.showInput(imageReal, width, height, 1)
 
         # Draw from the detected data
-        imageObserved, semantics, texts = capsNet.generateImage(shape[0], shape[1], allObs, False)
+        imageObserved, semantics, texts = capsNet.generateImage(width, height, allObs, False)
 
         # Print all Observations
         for capsule in allObs.keys():
@@ -134,18 +133,5 @@ if __name__ == '__main__':
             for index, obs in enumerate(allObs[capsule]):
                 print("Observation " + str(index))
                 obs.printOutputs(False)
-
-        drawPixels1 = [0.0] * (shape[0] * shape[1] * 3)
-        drawPixels2 = [0.0] * (shape[0] * shape[1] * 3)
-        
-        for yy in range(shape[1]):
-            for xx in range(shape[0]):
-                drawPixels1[(yy * shape[0] + xx) * 3] = imageReal[(yy * shape[0] + xx) * 4]
-                drawPixels1[(yy * shape[0] + xx) * 3 + 1] = imageReal[(yy * shape[0] + xx) * 4]
-                drawPixels1[(yy * shape[0] + xx) * 3 + 2] = imageReal[(yy * shape[0] + xx) * 4]
-
-                drawPixels2[(yy * shape[0] + xx) * 3] = imageObserved[(yy * shape[0] + xx) * 4]
-                drawPixels2[(yy * shape[0] + xx) * 3 + 1] = imageObserved[(yy * shape[0] + xx) * 4]
-                drawPixels2[(yy * shape[0] + xx) * 3 + 2] = imageObserved[(yy * shape[0] + xx) * 4]
                     
-        testUI.draw(drawPixels1, drawPixels2, shape[0], shape[1], shape[0], shape[1], semantics, texts, addNewSemanticCapsule, False)
+        testUI.draw(imageReal, imageObserved, width, height, width, height, semantics, texts, addNewSemanticCapsule, False)
