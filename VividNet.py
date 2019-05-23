@@ -38,8 +38,8 @@ class VividNet:
         return capsuleList
 
  
-    def setSyntheticPhysics(self, primitivesPhysics : PrimitivesPhysics):
-        self._intuitivePhysics.fillMemorySynthetically(primitivesPhysics)
+    def setSyntheticPhysics(self, primitivesPhysics : PrimitivesPhysics, extraTraining : int = 0):
+        self._intuitivePhysics.fillMemorySynthetically(primitivesPhysics, extraTraining)
 
 
     def showFrame(self, filename : str):

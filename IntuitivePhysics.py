@@ -78,12 +78,17 @@ class IntuitivePhysics:
         return aggregated     # Object Attributes + Symbol + Velocities + Static/Dynamic + Rigid/Elastic + Effects + External Effects
 
 
-    def fillMemorySynthetically(self, primitivesPhysics : PrimitivesPhysics):
+    def fillMemorySynthetically(self, primitivesPhysics : PrimitivesPhysics, extraTraining : int = 0):
         self._physicsMemory.setSyntheticPhysics(primitivesPhysics, self._capsuleNetwork.getAttributePool())
 
         if self._neuralNetPhiR.hasTraining() is False:
             self.trainPhiR()
+        for i in range(extraTraining):
+            self.trainPhiR()
+            
         if self._neuralNetPhiO.hasTraining() is False:
+            self.trainPhiO()
+        for i in range(extraTraining):
             self.trainPhiO()
 
 

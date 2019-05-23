@@ -4,11 +4,6 @@
 #        process a single image. The constant context switching 
 #        between rendering and neural networks seems to be the main
 #        culprit.
-#
-# Note2: Due to size constraints, we had to omit the trained models
-#        for the primitive capsules. Running this file will automatically
-#        re-train them, however, this might take over 4 hours (as tested
-#        on a Laptop with a nVidia GTX 1060)
 
 
 from TestPrimitives import TestPrimitives
@@ -47,9 +42,9 @@ if __name__ == '__main__':
 
     vividNet = VividNet()
 
-    retrainPrimitives = 2       # After initial Training, add 2 more loops, set this to 0 
+    retrainPrimitives = 0       # After initial Training, add X more loops, set this to 0 
                                 # after completion.
-    retrainPhysics = 1          # After initial Training, add 1 more loop, set this to 0 
+    retrainPhysics = 0          # After initial Training, add X more loop, set this to 0 
                                 # after completion.
     primCaps = vividNet.setRenderer(TestRenderer, TestPrimitives, retrainPrimitives)
     vividNet.setSyntheticPhysics(TestPhysics, retrainPhysics)
