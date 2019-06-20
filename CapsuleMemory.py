@@ -45,7 +45,6 @@ class CapsuleMemory(Memory):
         self._savedObservations.extend(observation)
 
     def clearObservations(self):
-        # TODO: Decide when to save and when not to
         self._savedObservations.extend(self._observations)
         self._observations = []
 
@@ -58,6 +57,15 @@ class CapsuleMemory(Memory):
     def getNumObservations(self):
         return len(self._observations)
 
+    def getMeanProbability(self):
+        if not self._savedObservations:
+            return 1.0
+
+        meanProb = 0.0
+        for obs in self._savedObservations:
+            meanProb = meanProb + obs.getProbability()
+
+        return meanProb / float(len(self._savedObservations))
 
     def getBestObservationAttributes(self):
         bestObs = None
@@ -95,8 +103,8 @@ class CapsuleMemory(Memory):
                         self.removeObservation(sortedObs[index2])
                     elif index2 > index and CapsuleMemory.checkSimilarObservations(obs.getOutputs(), sortedObs[index2].getOutputs()) > HyperParameters.SimilarObservationsCutOff:
                         self.removeObservation(sortedObs[index2])
-                    # TODO: Remove too small detections? TEST:
-                    elif sortedObs[index2].getOutput(attributeName = "Size") * sortedObs[index2].getOutput(attributeName = "Aspect-Ratio") < 0.08:
+                    # We remove detections that are too small
+                    elif sortedObs[index2].getOutput(attributeName = "Size") * sortedObs[index2].getOutput(attributeName = "Aspect-Ratio") < HyperParameters.SizeCutoff:
                         self.removeObservation(sortedObs[index2])
 
 

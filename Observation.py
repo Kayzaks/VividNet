@@ -122,6 +122,13 @@ class Observation:
         return self._outputProbability
 
 
+    def getMeanProbability(self):
+        if self._route is None:
+            return 1.0
+            
+        return self._route.getMeanProbability()
+
+
     def getInputProbability(self, capsule):
         for obs in self._inputObservations:
             if obs.getCapsule() == capsule:

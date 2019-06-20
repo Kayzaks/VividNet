@@ -1,6 +1,6 @@
 # VividNet
 
-VividNet is a proof-of-concept implementation for our paper (https://arxiv.org/abs/1905.08910). The goal of VividNet is to be an inverse-simulation pipeline based on neural-symbolic capsule networks. 
+VividNet is a proof-of-concept implementation for our papers (https://arxiv.org/abs/1905.08910 and https://arxiv.org/abs/1905.09891). The goal of VividNet is to be an inverse-simulation pipeline based on neural-symbolic capsule networks. 
 
 This project is still **work-in-progress**. At this point, the network is able to perform inverse-graphics, rendering and intuitive physics.
 

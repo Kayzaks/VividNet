@@ -215,7 +215,6 @@ class CapsuleNetwork:
                         attributes = {}
                         for xx in range(filterShape[0]):
                             for yy in range(filterShape[1]):
-                                # TODO: Use mapping from Renderer
                                 attributes[capsule.getAttributeByName("PixelC-" + str(xx) + "-" + str(yy))] = image[((yy + offsetY) * width + xx + offsetX) * 4]
                                 attributes[capsule.getAttributeByName("PixelR-" + str(xx) + "-" + str(yy))] = rads[xx, yy]
                                 attributes[capsule.getAttributeByName("PixelA-" + str(xx) + "-" + str(yy))] = angs[xx, yy]
@@ -275,7 +274,6 @@ class CapsuleNetwork:
         for capsule, obsList in observations.items():
             obs[capsule] = []
             for observation in obsList:
-                # TODO: Input Observations are still the original..
                 obs[capsule].append(Observation(capsule, observation.getTakenRoute(), observation.getInputObservations(), 
                                                 observation.getOutputs(), observation.getProbability()))
                 obsMap[obs[capsule][-1]] = observation
@@ -423,3 +421,5 @@ class CapsuleNetwork:
                         normal2 = testNormal2
 
         return distance, normal1, normal2
+
+    

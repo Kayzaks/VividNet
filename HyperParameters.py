@@ -4,7 +4,8 @@ class HyperParameters:
     # Capsules
     SimilarObservationsCutOff = 0.9 
     PrimitiveProbabilityCutOff = 0.75 
-    SemanticProbabilityCutOff = 0.80 
+    SemanticProbabilityCutOff = 0.75 
+    SizeCutoff = 0.08
 
     # Primitive Capsule Agreement
     PrimAgreementWidth = 0.0

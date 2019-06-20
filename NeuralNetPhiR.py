@@ -24,11 +24,6 @@ class NeuralNetPhiR(NeuralNet):
         model.add(Dense(128, activation='relu'))
         model.add(Dense(64, activation='relu'))
         
-        #model.add(Dense(512, activation='relu', input_shape=inputShape))
-        #model.add(Dense(512, activation='relu'))
-        #model.add(Dense(512, activation='relu'))
-        #model.add(Dense(512, activation='relu'))
-
         model.add(Dense(outputSize, activation='linear'))
 
         return model

@@ -19,8 +19,6 @@ class CapsuleRoute:
         self._fromCapsules          : list           = fromCapsules      # Capsules
         self._parentCapsule                          = parentCapsule
 
-        self._gFunctionLambda                        = None 
-        self._gammaFunctionLambda                    = None
         self._agreementFunctionLambda                = None
 
         self._gInputMapping         : dict           = None  # Attribute - List of Indices (Always 1 Element)
@@ -84,6 +82,10 @@ class CapsuleRoute:
             return HyperParameters.PrimitiveProbabilityCutOff
 
 
+    def getMeanProbability(self):
+        return self._memory.getMeanProbability()
+
+
     def createSemanticRoute(self, initialObservations : list):
         self._isSemanticCapsule = True
 
@@ -138,11 +140,7 @@ class CapsuleRoute:
                 
     def getOutputAttributes(self):
         return self._parentCapsule.getAttributes()
-        
-    def getInputActivations(self):
-        # TODO: Output as dict(Capsule, Probability)
-        return {(self._fromCapsules[0], 1.0)}
-
+  
 
     def pairInputCapsuleAttributes(self, attributes : dict):
         # attributes        # Attribute - List of Values

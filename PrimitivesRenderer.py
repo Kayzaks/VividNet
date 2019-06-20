@@ -338,7 +338,7 @@ class PrimitivesRenderer:
         transferAttributes = np.asarray(self.processAttributes(copy.copy(attributes)))
 
         # Python alternative
-        # return self.runPythonKernel(primitive, transferAttributes, width, height, altBackground, 1.0, isTraining)
+        #return self.runPythonKernel(primitive, transferAttributes, width, height, altBackground, 1.0, isTraining)
 
         # Cuda alternative
         return self.runCudaKernel(primitive, transferAttributes, width, height, altBackground, 1.0, isTraining)

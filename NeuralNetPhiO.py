@@ -18,10 +18,7 @@ class NeuralNetPhiO(NeuralNet):
         
         model.add(Dense(256, activation='relu', input_shape=inputShape))
         model.add(Dense(outputSize * 2, activation='relu'))
-        
-        #model.add(Dense(256, activation='linear', input_shape=inputShape))
-        #model.add(Dense(outputSize * 2, activation='linear'))
-        
+                
         model.add(Dense(outputSize, activation='linear'))
 
         return model
