@@ -36,6 +36,10 @@ class CapsuleRoute:
     def getJSONMain(self):
         return self._memory.getJSONMain()
  
+    
+    def getJSONMemory(self):
+        return {"route" : self._name, "memory" : self._memory.getJSONMemory()}
+
 
     def getName(self):
         return self._name
@@ -49,8 +53,11 @@ class CapsuleRoute:
 
         return True        
 
-    def addObservations(self, observation : Observation):
-        self._memory.addObservations(observation)
+    def addSavedObservations(self, observations : list):
+        self._memory.addSavedObservations(observations)
+        
+    def addObservations(self, observations : list):
+        self._memory.addObservations(observations)
 
     def clearObservations(self):
         self._memory.clearObservations()
@@ -94,11 +101,9 @@ class CapsuleRoute:
         return self._memory.getMeanProbability()
 
 
-    def createSemanticRoute(self, initialObservations : list):
-        self._isSemanticCapsule = True
-
+    def observationFromInputs(self, inputObservations : list, forcedProbability : float = 0.0):
         inputs = {}                             # Attribute - List of Values
-        for obs in initialObservations:
+        for obs in inputObservations:
             newInputs = obs.getOutputs(True)    # Attribute - Value
             for newAttr, newValue in newInputs.items():
                 if newAttr in inputs:
@@ -107,9 +112,16 @@ class CapsuleRoute:
                     inputs[newAttr] = [newValue]
 
         outputs = self.runGammaFunction(inputs, False)
-        newObservation = Observation(self._parentCapsule, self, initialObservations, outputs, 1.0)
 
-        self._memory.addSavedObservations([newObservation])
+        # TODO: Use actual probability
+        return Observation(self._parentCapsule, self, inputObservations, outputs, max(forcedProbability, 1.0))
+
+
+
+    def createSemanticRoute(self, initialObservations : list):
+        self._isSemanticCapsule = True
+
+        self._memory.addSavedObservations([self.observationFromInputs(initialObservations, 1.0)])
         self._memory.setLambdaKnownGamma((lambda attributes : self.runGammaFunction(attributes)))
                 
         self.resizeInternals()            

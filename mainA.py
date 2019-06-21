@@ -40,15 +40,11 @@ set_session(tf.Session(config=config))
 if __name__ == '__main__':
     testUI = GraphicsUserInterface()
 
-    vividNet = VividNet("vividnetA")
-    primCaps = vividNet.setRenderer(TestRenderer, TestPrimitives, 0) # , 2)
-
-    primWidth = 28              # Width of the Primitive Capsule Input
-    primHeight = 28             # Height of the Primitive Capsule Input2
-    
-    retrain = 1                 # After initial Training (2 loops), set this to 0 to avoid
+    retrain = 0                 # After initial Training (2 loops), set this to 0 to avoid
                                 # retraining each run
 
+    vividNet = VividNet("vividnetA")
+    primCaps = vividNet.setRenderer(TestRenderer, TestPrimitives, retrain)
     semCaps = vividNet.loadSemantic()
 
     # UI Button Function for adding new Capsules

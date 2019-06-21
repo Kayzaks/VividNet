@@ -38,7 +38,7 @@ class VividNet:
 
 
     def toJSON(self):
-        return json.dumps(self, default=lambda o: o.getJSON(), sort_keys=True, indent=4)
+        return json.dumps(self, default=lambda o: o.getJSON(), sort_keys=True, indent=1)
 
     def loadSemantic(self):
         fpath = Path(self._name + ".json")

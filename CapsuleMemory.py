@@ -33,6 +33,20 @@ class CapsuleMemory(Memory):
 
         return obsList
 
+        
+    def getJSONMemory(self):
+        memoryList = []
+        
+        # All memory entries apart from the first
+        for idx in range(1, len(self._savedObservations)):
+            obsList = []            
+            for obs in self._savedObservations[idx].getInputObservations():
+                obsList.append(obs.getJSONOutput())
+            memoryList.append(obsList)
+
+        return memoryList
+
+
 
     def setLambdaKnownG(self, lambdaYGenerator, lambdaXInferer, xMapping : dict, yMapping : dict):
         # xMapping  # Column Index - Attribute

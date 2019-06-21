@@ -40,7 +40,6 @@ class CapsuleNetwork:
 
     def getJSON(self):
         # Only needs to save semantic capsules and data
-        
         semanticData = []
         for layerID in range(self._numSemanticLayers):
             layerCaps = []
@@ -61,6 +60,8 @@ class CapsuleNetwork:
                 capsName = capsData["name"]
                 
                 obsList = []
+                # First Route saved/loaded independently, as it is required to create the
+                # Capsule.
                 for obsData in capsData["firstRouteObservations"]:
                     obsCaps = self.getCapsuleByName(obsData["name"])
                     obsRoute = obsCaps.getRouteByName(obsData["route"])
@@ -73,7 +74,10 @@ class CapsuleNetwork:
                     obsList.append(Observation(obsCaps, obsRoute, [], attrDict, obsProb))
                 
                 semCaps[capsName] = self.addSemanticCapsule(capsName, obsList, 0)
-                # TODO: Add Memory and Routes...
+
+                # Adding remaining memory
+                if "remainingMemory" in capsData:
+                    semCaps[capsName].putJSONMemory(capsData["remainingMemory"], self._attributePool, lambda name : self.getCapsuleByName(name))
         
         return semCaps  # List of Semantic Capsules
 

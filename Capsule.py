@@ -33,11 +33,45 @@ class Capsule:
         capsData["name"] = self.getName()
 
         # Adding the First Route
+        # First Route saved/loaded independently, as it is required to create the
+        # Capsule.
         capsData["firstRouteObservations"] = self._routes[0].getJSONMain()
 
-        # TODO: Adding all other routes + memory
+        routes = []
+        for idx in range(1, len(self._routes)):
+            routes.append(self._routes[idx].getJSONMemory())
+
+        capsData["remainingMemory"] = routes
 
         return capsData           
+
+
+    def putJSONMemory(self, data, attributePool : AttributePool, capsuleByName):
+        for routeData in data:
+            memoryList = []
+            for memory in routeData["memory"]:
+                inputObs = []
+                for obs in memory:
+                    caps = capsuleByName(obs["name"])
+                    route = caps.getRouteByName(obs["route"])
+                    prob = obs["probability"]
+                    
+                    attrDict = {}
+                    for attr in obs["attributes"]:
+                        attrDict[caps.getAttributeByName(attr["attribute"])] = attr["value"]
+                                    
+                    inputObs.append(Observation(caps, route, [], attrDict, prob))
+                
+                memoryList.append(route.observationFromInputs(inputObs))
+                
+            
+            currentRoute = self.getRouteByName(routeData["route"])
+            if currentRoute is None:
+                self.addSemanticRoute(memoryList[0].getInputObservations(), attributePool)
+                memoryList.pop(0)
+                currentRoute.addSavedObservations(memoryList)
+            else:
+                currentRoute.addSavedObservations(memoryList)
 
 
     def getName(self):
@@ -57,7 +91,7 @@ class Capsule:
         for route in self._routes:
             if route.getName() == name:
                 return route
-        return self._routes[0]
+        return None
 
 
     def getPrimitives(self):
