@@ -1,0 +1,199 @@
+{
+    "capsuleNetwork": {
+        "semanticLayers": [
+            {
+                "semanticCapsules": [
+                    {
+                        "firstRouteObservations": [
+                            {
+                                "attributes": [
+                                    {
+                                        "attribute": "Position-X",
+                                        "value": 0.3762563132923542
+                                    },
+                                    {
+                                        "attribute": "Position-Y",
+                                        "value": 0.6237436867076458
+                                    },
+                                    {
+                                        "attribute": "Size",
+                                        "value": 0.175
+                                    },
+                                    {
+                                        "attribute": "Rotation",
+                                        "value": 0.125
+                                    },
+                                    {
+                                        "attribute": "Aspect-Ratio",
+                                        "value": 1.0
+                                    },
+                                    {
+                                        "attribute": "Intensity",
+                                        "value": 0.6
+                                    },
+                                    {
+                                        "attribute": "Strength",
+                                        "value": 0.07
+                                    }
+                                ],
+                                "name": "TestPrimitives.Square",
+                                "probability": 1.0,
+                                "route": "TestPrimitives.Square-R-0"
+                            },
+                            {
+                                "attributes": [
+                                    {
+                                        "attribute": "Position-X",
+                                        "value": 0.2525126265847084
+                                    },
+                                    {
+                                        "attribute": "Position-Y",
+                                        "value": 0.5
+                                    },
+                                    {
+                                        "attribute": "Size",
+                                        "value": 0.105
+                                    },
+                                    {
+                                        "attribute": "Rotation",
+                                        "value": 0.20833333333333331
+                                    },
+                                    {
+                                        "attribute": "Aspect-Ratio",
+                                        "value": 1.0
+                                    },
+                                    {
+                                        "attribute": "Intensity",
+                                        "value": 0.1
+                                    },
+                                    {
+                                        "attribute": "Strength",
+                                        "value": 0.28
+                                    }
+                                ],
+                                "name": "TestPrimitives.Triangle",
+                                "probability": 1.0,
+                                "route": "TestPrimitives.Triangle-R-0"
+                            },
+                            {
+                                "attributes": [
+                                    {
+                                        "attribute": "Position-X",
+                                        "value": 0.5
+                                    },
+                                    {
+                                        "attribute": "Position-Y",
+                                        "value": 0.7474873734152916
+                                    },
+                                    {
+                                        "attribute": "Size",
+                                        "value": 0.105
+                                    },
+                                    {
+                                        "attribute": "Rotation",
+                                        "value": 0.04166667000000002
+                                    },
+                                    {
+                                        "attribute": "Aspect-Ratio",
+                                        "value": 1.0
+                                    },
+                                    {
+                                        "attribute": "Intensity",
+                                        "value": 0.1
+                                    },
+                                    {
+                                        "attribute": "Strength",
+                                        "value": 0.28
+                                    }
+                                ],
+                                "name": "TestPrimitives.Triangle",
+                                "probability": 1.0,
+                                "route": "TestPrimitives.Triangle-R-0"
+                            }
+                        ],
+                        "name": "Rocket"
+                    },
+                    {
+                        "firstRouteObservations": [
+                            {
+                                "attributes": [
+                                    {
+                                        "attribute": "Position-X",
+                                        "value": 0.5148492424049175
+                                    },
+                                    {
+                                        "attribute": "Position-Y",
+                                        "value": 0.4851507575950825
+                                    },
+                                    {
+                                        "attribute": "Size",
+                                        "value": 0.13999999999999999
+                                    },
+                                    {
+                                        "attribute": "Rotation",
+                                        "value": 0.125
+                                    },
+                                    {
+                                        "attribute": "Aspect-Ratio",
+                                        "value": 1.0
+                                    },
+                                    {
+                                        "attribute": "Intensity",
+                                        "value": 0.8
+                                    },
+                                    {
+                                        "attribute": "Strength",
+                                        "value": 0.07
+                                    }
+                                ],
+                                "name": "TestPrimitives.Circle",
+                                "probability": 1.0,
+                                "route": "TestPrimitives.Circle-R-0"
+                            },
+                            {
+                                "attributes": [
+                                    {
+                                        "attribute": "Position-X",
+                                        "value": 0.6237436867076458
+                                    },
+                                    {
+                                        "attribute": "Position-Y",
+                                        "value": 0.3762563132923542
+                                    },
+                                    {
+                                        "attribute": "Size",
+                                        "value": 0.105
+                                    },
+                                    {
+                                        "attribute": "Rotation",
+                                        "value": 0.125
+                                    },
+                                    {
+                                        "attribute": "Aspect-Ratio",
+                                        "value": 1.0
+                                    },
+                                    {
+                                        "attribute": "Intensity",
+                                        "value": 0.1
+                                    },
+                                    {
+                                        "attribute": "Strength",
+                                        "value": 0.28
+                                    }
+                                ],
+                                "name": "TestPrimitives.Triangle",
+                                "probability": 1.0,
+                                "route": "TestPrimitives.Triangle-R-0"
+                            }
+                        ],
+                        "name": "Shuttle"
+                    }
+                ]
+            }
+        ]
+    },
+    "inputHeight": 1,
+    "inputWidth": 1,
+    "name": "vividnetA",
+    "pastFrames": []
+}

@@ -13,7 +13,7 @@ import time
 
 class CapsuleNetwork:
 
-    def __init__(self):
+    def __init__(self, name : str):
         self._primitiveCapsules  : list          = []               # Capsule
         self._semanticCapsules   : list          = []               # Capsule
         self._pixelCapsules      : dict          = {}               # Shape Tuple - Capsule
@@ -24,7 +24,7 @@ class CapsuleNetwork:
         self._renderer                           = None             # PrimitivesRenderer Instance
         self._metaLearner        : MetaLearner   = MetaLearner()
         self._capsuleCount       : int           = 0
-        self._name               : str           = "CapsuleNetwork"
+        self._name               : str           = name
 
         # Adding all Meta Learner Lambdas:
         # 1. Observed Axioms have same $\Omega$ as parent

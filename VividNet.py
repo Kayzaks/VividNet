@@ -16,7 +16,7 @@ class VividNet:
 
     def __init__(self, vnName : str):
         self._name             : str                = vnName
-        self._capsuleNetwork   : CapsuleNetwork     = CapsuleNetwork()
+        self._capsuleNetwork   : CapsuleNetwork     = CapsuleNetwork(vnName + "-CN")
         self._intuitivePhysics : IntuitivePhysics   = IntuitivePhysics(self._capsuleNetwork)
         self._pastFrames       : list               = []                                        # List of {Capsule - List of Observations}
         self._inputWidth       : int                = 1                                         # Last Frame Width
