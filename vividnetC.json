@@ -1,0 +1,89 @@
+{
+    "capsuleNetwork": {
+        "semanticLayers": [
+            {
+                "semanticCapsules": [
+                    {
+                        "firstRouteObservations": [
+                            {
+                                "attributes": [
+                                    {
+                                        "attribute": "Position-X",
+                                        "value": 0.5
+                                    },
+                                    {
+                                        "attribute": "Position-Y",
+                                        "value": 0.4
+                                    },
+                                    {
+                                        "attribute": "Size",
+                                        "value": 0.2
+                                    },
+                                    {
+                                        "attribute": "Rotation",
+                                        "value": 0.0
+                                    },
+                                    {
+                                        "attribute": "Aspect-Ratio",
+                                        "value": 1.0
+                                    },
+                                    {
+                                        "attribute": "Intensity",
+                                        "value": 0.8
+                                    },
+                                    {
+                                        "attribute": "Strength",
+                                        "value": 0.1
+                                    }
+                                ],
+                                "name": "TestPrimitives.Circle",
+                                "probability": 1.0,
+                                "route": "TestPrimitives.Circle-R-0"
+                            },
+                            {
+                                "attributes": [
+                                    {
+                                        "attribute": "Position-X",
+                                        "value": 0.5
+                                    },
+                                    {
+                                        "attribute": "Position-Y",
+                                        "value": 0.6
+                                    },
+                                    {
+                                        "attribute": "Size",
+                                        "value": 0.2
+                                    },
+                                    {
+                                        "attribute": "Rotation",
+                                        "value": 0.0
+                                    },
+                                    {
+                                        "attribute": "Aspect-Ratio",
+                                        "value": 1.0
+                                    },
+                                    {
+                                        "attribute": "Intensity",
+                                        "value": 0.8
+                                    },
+                                    {
+                                        "attribute": "Strength",
+                                        "value": 0.1
+                                    }
+                                ],
+                                "name": "TestPrimitives.Circle",
+                                "probability": 1.0,
+                                "route": "TestPrimitives.Circle-R-0"
+                            }
+                        ],
+                        "name": "Figure8"
+                    }
+                ]
+            }
+        ]
+    },
+    "inputHeight": 1,
+    "inputWidth": 1,
+    "name": "vividnetC",
+    "pastFrames": []
+}

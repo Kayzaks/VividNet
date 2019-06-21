@@ -38,8 +38,59 @@ class CapsuleNetwork:
         # 5. $\Omega: Z(\vec{\alpha}, \vec{\tilde{\alpha}})$ indicates attribute mismatch \\ for (position, rotation, size) only
 
 
+    def getJSON(self):
+        # Only needs to save semantic capsules and data
+        
+        semanticData = []
+        for layerID in range(self._numSemanticLayers):
+            layerCaps = []
+            for caps in self._semanticLayers[layerID]:
+                layerCaps.append(caps.getJSON())
+
+            semanticData.append({"semanticCapsules" : layerCaps})
+
+        return {"semanticLayers" : semanticData}
+
+
+    def putJSON(self, data):
+        # Only needs to load semantic capsules and data
+        semCaps = {}
+        for layerData in data["semanticLayers"]:
+            for capsData in layerData["semanticCapsules"]:
+
+                capsName = capsData["name"]
+                
+                obsList = []
+                for obsData in capsData["firstRouteObservations"]:
+                    obsCaps = self.getCapsuleByName(obsData["name"])
+                    obsRoute = obsCaps.getRouteByName(obsData["route"])
+                    obsProb = obsData["probability"]
+
+                    attrDict = {}
+                    for attrData in obsData["attributes"]:
+                        attrDict[obsCaps.getAttributeByName(attrData["attribute"])] = attrData["value"]
+
+                    obsList.append(Observation(obsCaps, obsRoute, [], attrDict, obsProb))
+                
+                semCaps[capsName] = self.addSemanticCapsule(capsName, obsList, 0)
+                # TODO: Add Memory and Routes...
+        
+        return semCaps  # List of Semantic Capsules
+
+
+
     def getName(self):
         return self._name
+
+
+    def getCapsuleByName(self, name : str):
+        for caps in self._primitiveCapsules:
+            if caps.getName() == name:
+                return caps
+        for caps in self._semanticCapsules:
+            if caps.getName() == name:
+                return caps
+        return None
 
 
     def agreementOfMostLikelyParent(self, observedAxioms : dict):

@@ -27,6 +27,19 @@ class Capsule:
         self._pixelObservations : list                      = list()                    # List of Observations
 
 
+    def getJSON(self):
+        # Only Semantic Data
+        capsData = {}
+        capsData["name"] = self.getName()
+
+        # Adding the First Route
+        capsData["firstRouteObservations"] = self._routes[0].getJSONMain()
+
+        # TODO: Adding all other routes + memory
+
+        return capsData           
+
+
     def getName(self):
         return self._name
 
@@ -38,6 +51,13 @@ class Capsule:
     def continueTraining(self, showDebugOutput = True, specificSplit : list = None):
         for route in self._routes:
             route.retrain(showDebugOutput, specificSplit)
+
+
+    def getRouteByName(self, name : str):
+        for route in self._routes:
+            if route.getName() == name:
+                return route
+        return self._routes[0]
 
 
     def getPrimitives(self):

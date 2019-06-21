@@ -25,6 +25,14 @@ class CapsuleMemory(Memory):
         self._epochsCompleted   : int   = 0
         self._scrambled         : list  = None   # Column Index
 
+    def getJSONMain(self):
+        obsList = []
+        
+        for obs in self._savedObservations[0].getInputObservations():
+            obsList.append(obs.getJSONOutput())
+
+        return obsList
+
 
     def setLambdaKnownG(self, lambdaYGenerator, lambdaXInferer, xMapping : dict, yMapping : dict):
         # xMapping  # Column Index - Attribute

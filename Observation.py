@@ -30,6 +30,22 @@ class Observation:
                 self._outputAttributes[attribute] = value
 
 
+    def getJSONOutput(self):
+        obs = {}
+        obs["name"] = self._capsule.getName()
+        obs["route"] = self._route.getName()
+        obs["probability"] = self._outputProbability
+        
+        attrList = []
+        for attr, val in self._outputAttributes.items():
+            attrList.append({"attribute" : attr.getName(), "value" : val})
+        
+        obs["attributes"] = attrList
+
+        return obs
+
+
+
     def isParent(self, observation):
         for obs in self._inputObservations:
             if obs == observation:
@@ -125,7 +141,7 @@ class Observation:
     def getMeanProbability(self):
         if self._route is None:
             return 1.0
-            
+
         return self._route.getMeanProbability()
 
 

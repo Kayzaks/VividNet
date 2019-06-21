@@ -33,6 +33,14 @@ class CapsuleRoute:
         self._rotationalLabels      : list           = ["Rotation"] # Per Axis
 
 
+    def getJSONMain(self):
+        return self._memory.getJSONMain()
+ 
+
+    def getName(self):
+        return self._name
+
+
     def haveSameParent(self, capsules : list):
         # capsules  # List of Capsules
         for caps in capsules:

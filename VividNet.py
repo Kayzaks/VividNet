@@ -7,16 +7,51 @@ from PrimitivesRenderer import PrimitivesRenderer
 from Utility import Utility
 from HyperParameters import HyperParameters
 
+from pathlib import Path
+
+import json
 import math
 
 class VividNet:
 
-    def __init__(self):
+    def __init__(self, vnName : str):
+        self._name             : str                = vnName
         self._capsuleNetwork   : CapsuleNetwork     = CapsuleNetwork()
         self._intuitivePhysics : IntuitivePhysics   = IntuitivePhysics(self._capsuleNetwork)
         self._pastFrames       : list               = []                                        # List of {Capsule - List of Observations}
         self._inputWidth       : int                = 1                                         # Last Frame Width
         self._inputHeight      : int                = 1                                         # Last Frame Height
+
+    def getJSON(self):
+        return {"name"           : self._name,
+                "pastFrames"     : self._pastFrames,
+                "inputWidth"     : self._inputWidth,
+                "inputHeight"    : self._inputHeight,
+                "capsuleNetwork" : self._capsuleNetwork.getJSON()}
+
+    def putJSON(self, data):
+        self._name = data["name"]
+        self._pastFrames = data["pastFrames"]
+        self._inputWidth = data["inputWidth"]
+        self._inputHeight = data["inputHeight"]
+        return self._capsuleNetwork.putJSON(data["capsuleNetwork"])   # List of Semantic Capsules
+
+
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.getJSON(), sort_keys=True, indent=4)
+
+    def loadSemantic(self):
+        fpath = Path(self._name + ".json")
+        if fpath.is_file():
+            with open(self._name + ".json", encoding="utf-8") as inputfile:  
+                data = json.load(inputfile)
+                return self.putJSON(data)
+
+        return {}
+
+    def saveSemantic(self):
+        with open(self._name + ".json", "w", encoding="utf-8") as outfile:
+            outfile.write(self.toJSON())
 
 
     def getWidth(self):
