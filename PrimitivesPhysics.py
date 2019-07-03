@@ -17,6 +17,13 @@ class PrimitivesPhysics:
 
     def init(self):
         return
+
+
+    def generateInteractionSequence(self, capsNet : CapsuleNetwork, width : int, height : int, folder : str, idname : str):
+        # Generate Images in the folder with name id + "." + sequence_index + file_format
+
+        return
+    
     
     def generateRelation(self):
         # Triplet Format:
@@ -30,7 +37,7 @@ class PrimitivesPhysics:
         triplet = [0.0]
         effect  = [0.0]
         return triplet, effect
-        
+
 
     def generateInteraction(self):
         # Aggregate Format:
@@ -46,24 +53,3 @@ class PrimitivesPhysics:
         return aggregate, attributes
 
     # --------------------
-
-
-    def render(self, capsNet : CapsuleNetwork, observationFrames : list, width : int, height : int):
-        # observationFrames     # List of Dictionaries {capsule, List of Observations}
-
-        frames = []
-        for observationFrame in observationFrames:
-
-            imageReal, semantics, texts = capsNet.generateImage(width, height, observationFrame, False)
-
-            drawPixels = [0.0] * (width * height * 3)
-            
-            for yy in range(height):
-                for xx in range(width):
-                    drawPixels[(yy * width + xx) * 3] = imageReal[(yy * width + xx) * 4]
-                    drawPixels[(yy * width + xx) * 3 + 1] = imageReal[(yy * width + xx) * 4]
-                    drawPixels[(yy * width + xx) * 3 + 2] = imageReal[(yy * width + xx) * 4]
-
-            frames.append(drawPixels)
-
-        return frames   # Renderable frames for the UI

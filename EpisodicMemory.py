@@ -1,1 +1,0 @@
-# TODO: Register all CapsuleMemory here

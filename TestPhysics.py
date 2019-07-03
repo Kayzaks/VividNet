@@ -1,6 +1,9 @@
 
 
 from PrimitivesPhysics import PrimitivesPhysics
+from CapsuleNetwork import CapsuleNetwork
+from Capsule import Capsule
+from Observation import Observation
 from RelationTriplet import RelationTriplet
 from HyperParameters import HyperParameters
 from AttributePool import AttributePool
@@ -8,6 +11,7 @@ from AttributePool import AttributePool
 import numpy as np
 import math
 import random
+import scipy.misc
 
 
 class TestPhysics(PrimitivesPhysics):
@@ -20,6 +24,141 @@ class TestPhysics(PrimitivesPhysics):
         self._arOffset = self._attributePool.getAttributeOrderByName("Aspect-Ratio")
         self._intOffset = self._attributePool.getAttributeOrderByName("Intensity")
         self._strOffset = self._attributePool.getAttributeOrderByName("Strength")
+
+
+
+    def generateInteractionSequence(self, capsNet : CapsuleNetwork, width : int, height : int, folder : str, idname : str):
+        # Generate Images in the folder with name id + "." + sequence_index + file_format
+
+        # 0 = No Interaction
+        # 1 = Newtonian Collision
+        interType = random.randint(0, 1)        
+
+        # 0 = Image Before
+        # 1 = Image at Interaction
+        # 2 = Image After
+
+        positionA = [None, None, None]
+        positionB = [None, None, None]
+
+        positionA[1] = np.array([0.5, 0.5]) #np.array([random.random(), random.random()])
+
+        # TODO: Assuming Circles for now       
+        massA = random.random() * 0.2 + 0.1
+        massB = random.random() * 0.2 + 0.1
+
+        intA = random.random() 
+        intB = random.random() 
+        strA = min(random.random(), (0.333333 - massA) * 10.0 ) 
+        strB = min(random.random(), (0.333333 - massB) * 10.0 ) 
+        rotA = random.random() 
+        rotB = random.random() 
+
+        awayDir = np.array([random.random() - 0.5, random.random() - 0.5])
+        awayDir = awayDir / np.linalg.norm(awayDir)
+
+        velMod = 0.5
+
+        if 1 == 1: #interType == 10:
+            # No Interaction
+            maxDist = random.random()
+            awayVec = awayDir * ((massA + massB + (strA + strB) * 0.1 ) * 0.5 + maxDist + 0.02)
+            positionB[1] = positionA[1] + awayVec
+            # Velocities
+            velA = np.array([random.random() - 0.5, random.random() - 0.5]) * min(maxDist, velMod * random.random())
+            velB = np.array([random.random() - 0.5, random.random() - 0.5]) * min(maxDist, velMod * random.random())
+
+            positionA[0] = positionA[1] - velA
+            positionA[2] = positionA[1] + velA
+            
+            positionB[0] = positionB[1] - velB
+            positionB[2] = positionB[1] + velB
+            
+        elif interType == 1:
+            # Interaction
+            awayVec = awayDir * ((massA + massB + (strA + strB) * 0.1 ) * 0.5)
+            positionB[1] = positionA[1] + awayVec
+            # Velocities
+            velA = np.array([random.random() - 0.5, random.random() - 0.5]) * velMod * random.random()
+            velB = np.array([random.random() - 0.5, random.random() - 0.5]) * velMod * random.random()
+
+            if np.dot(velA, velB) < 0:
+                # Flying away from each other -> Reverse one Velocity
+                velA = -velA
+
+            if (np.dot(velA, awayDir) < 0 and np.dot(velB, awayDir) < 0 and np.linalg.norm(velB) < np.linalg.norm(velA)) or \
+               (np.dot(velA, awayDir) > 0 and np.dot(velB, awayDir) > 0 and np.linalg.norm(velA) < np.linalg.norm(velB)):
+                # A Flying away from B and B flying towards A (or B Flying away from A and A flying towards B)
+                # Only collide if B (A) is faster than A (B), thus we switch velocities
+                velTemp = velA
+                velA = velB
+                velB = velTemp
+
+            positionA[0] = positionA[1] - velA
+            positionB[0] = positionB[1] - velB
+            
+            tempB = np.dot((velB - velA), awayVec) / (math.pow(np.linalg.norm(awayVec), 2.0))
+            resultVelB = velB - (2 * massA / (massA + massB)) * tempB * awayVec
+            
+            tempA = np.dot((velA - velB), -awayVec) / (math.pow(np.linalg.norm(awayVec), 2.0))
+            resultVelA = velA - (2 * massB / (massA + massB)) * tempA * (-awayVec)
+
+            positionA[2] = positionA[1] + resultVelA            
+            positionB[2] = positionB[1] + resultVelB
+
+        attributesA = [None, None, None]
+        attributesB = [None, None, None]
+
+        for i in range(3):
+            attributesA[i] = np.zeros(HyperParameters.MaximumAttributeCount)
+            attributesB[i] = np.zeros(HyperParameters.MaximumAttributeCount)
+
+            attributesA[i][self._xPosOffset] = positionA[i][0]
+            attributesA[i][self._yPosOffset] = positionA[i][1]
+            attributesA[i][self._sizeOffset] = massA
+            attributesA[i][self._intOffset] = intA
+            attributesA[i][self._strOffset] = strA
+            attributesA[i][self._rotOffset] = rotA
+            attributesA[i][self._arOffset] = 1.0
+
+            attributesB[i][self._xPosOffset] = positionB[i][0]
+            attributesB[i][self._yPosOffset] = positionB[i][1]
+            attributesB[i][self._sizeOffset] = massB
+            attributesB[i][self._intOffset] = intB
+            attributesB[i][self._strOffset] = strB
+            attributesB[i][self._rotOffset] = rotB
+            attributesB[i][self._arOffset] = 1.0
+
+        # Render Images and Save
+
+        circCaps = capsNet.getCapsuleByName("TestPrimitives.Circle")
+
+        for i in range(3):
+            attrDictA = {}
+            for j in range(len(attributesA[i])):
+                attrDictA[circCaps.getAttributeByName(self._attributePool.getAttributeNameByOrder(j))] = attributesA[i][j]
+
+            attrDictB = {}
+            for j in range(len(attributesB[i])):
+                attrDictB[circCaps.getAttributeByName(self._attributePool.getAttributeNameByOrder(j))] = attributesB[i][j]
+
+            observationA = Observation(circCaps, circCaps._routes[0], [], attrDictA, 1.0)
+            observationB = Observation(circCaps, circCaps._routes[0], [], attrDictB, 1.0)
+            obs = {circCaps : [observationA, observationB]}
+
+            imageReal, ignore1, ignore2 = capsNet.generateImage(width, height, obs)
+
+            pixels = [0.0] * (width * height * 3)
+            
+            for yy in range(height):
+                for xx in range(width):
+                    pixels[(yy * width + xx) * 3] = imageReal[(yy * width + xx) * 4]
+                    pixels[(yy * width + xx) * 3 + 1] = imageReal[(yy * width + xx) * 4]
+                    pixels[(yy * width + xx) * 3 + 2] = imageReal[(yy * width + xx) * 4]
+
+            scipy.misc.imsave(folder + idname + "." + str(i) + ".png", np.reshape(pixels, [height, width, 3]))
+
+        return
 
 
     def generateRelation(self):

@@ -61,4 +61,11 @@ class AttributePool:
         else:
             return -1
 
+
+    def getAttributeNameByOrder(self, index : int):
+        if index < len(self._order):
+            return self._order[index]
+        else:
+            return ""
+
             
