@@ -152,3 +152,10 @@ class Utility:
 
         return outImage, width, height
         
+
+    @staticmethod
+    def andElements(items : list):
+        output = True
+        for x in items:
+            output = output and x
+        return output

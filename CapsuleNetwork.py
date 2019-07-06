@@ -3,6 +3,7 @@ from Capsule import Capsule
 from PrimitivesRenderer import Primitives
 from Observation import Observation
 from MetaLearner import MetaLearner
+from Utility import Utility
 
 import copy
 import math
@@ -26,16 +27,19 @@ class CapsuleNetwork:
         self._capsuleCount       : int           = 0
         self._name               : str           = name
 
+
         # Adding all Meta Learner Lambdas:
         # 1. Observed Axioms have same $\Omega$ as parent
         self._metaLearner.addLambda(lambda obs, axioms : len(self.findSameParents(list(axioms.keys()))) > 0)
         # 2. Observed Axioms don't have same $\Omega$ as parent
         self._metaLearner.addLambda(lambda obs, axioms : len(self.findSameParents(list(axioms.keys()))) == 0)
         # 3. Parts tracked from previous scenes
-        # TODO
+        self._metaLearner.addLambda(lambda obs, axioms : \
+            Utility.andElements([Utility.andElements([obsItem.hasPreviousObservation() for obsItem in obsList]) for obsList in axioms.values()]))
         # 4. $\Omega: Z(\vec{\alpha}, \vec{\tilde{\alpha}})$ indicates one attribute mismatch \\ with no entry in memory $\alpha^i >\epsilon$
         # TODO: self._metaLearner.addLambda(lambda obs, axioms : self.agreementOfMostLikelyParent(axioms))
         # 5. $\Omega: Z(\vec{\alpha}, \vec{\tilde{\alpha}})$ indicates attribute mismatch \\ for (position, rotation, size) only
+        # TODO:
 
 
     def getJSON(self):
