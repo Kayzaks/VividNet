@@ -47,7 +47,7 @@ if __name__ == '__main__':
     primCaps = vividNet.setRenderer(TestRenderer, TestPrimitives, retrain)
     semCaps = vividNet.loadSemantic()
 
-    # UI Button Function for adding new Capsules
+    # UI Button Functions for Meta-Learning
     def addNewSemanticCapsule(name : str, observationList : list):
         print("Training new Capsule '" + name + "' from:")
         for obs in observationList:
@@ -55,13 +55,34 @@ if __name__ == '__main__':
 
         newCaps = vividNet._capsuleNetwork.addSemanticCapsule(name, observationList)
         
+    def trainExistingSemanticCapsule(name : str, observationList : list):
+        print("Training existing Capsule '" + name + "' from:")
+        for obs in observationList:
+            obs.printOutputs(True)
+
+        vividNet._capsuleNetwork.addSemanticTraining(name, observationList)
+        
+    def addNewAttribute(name : str, observationList : list):
+        print("Training new Attribute '" + name + "' from:")
+        for obs in observationList:
+            obs.printOutputs(True)
+
+        vividNet._capsuleNetwork.addAttribute(name, observationList)
+        
+    def trainExistingAttribute(name : str, observationList : list):
+        print("Training existing Attribute '" + name + "' from:")
+        for obs in observationList:
+            obs.printOutputs(True)
+
+        vividNet._capsuleNetwork.addAttributeTraining(name, observationList)
+        
 
     for i in range(3):
         # Load the test image
         imageReal, width, height = Utility.loadImage("Examples/Ascene" + str(i) + ".png") 
 
         # Feed-Forward Pass through the Network
-        allObs = vividNet._capsuleNetwork.showInput(imageReal, width, height, 1)
+        allObs, recommendation = vividNet._capsuleNetwork.showInput(imageReal, width, height, 1)
 
         # Draw from the detected data
         imageObserved, semantics, texts = vividNet._capsuleNetwork.generateImage(width, height, allObs, False)
@@ -73,4 +94,6 @@ if __name__ == '__main__':
                 print("Observation " + str(index))
                 obs.printOutputs(False)
                     
-        testUI.draw(imageReal, imageObserved, width, height, width, height, semantics, texts, addNewSemanticCapsule, False)
+        testUI.draw(imageReal, imageObserved, width, height, width, height, semantics, texts, 
+                    addNewSemanticCapsule, trainExistingSemanticCapsule, addNewAttribute, trainExistingAttribute, 
+                    False, recommendation)

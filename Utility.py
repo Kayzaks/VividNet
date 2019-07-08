@@ -159,3 +159,12 @@ class Utility:
         for x in items:
             output = output and x
         return output
+
+    
+    @staticmethod
+    def safeCast(val, to_type, default=None):
+        # From https://stackoverflow.com/questions/6330071/safe-casting-in-python
+        try:
+            return to_type(val)
+        except (ValueError, TypeError):
+            return default

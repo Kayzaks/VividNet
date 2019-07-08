@@ -1,17 +1,40 @@
 
+from Utility import Utility
+
 import numpy as np
 
 class MetaLearner:
     def __init__(self):
         self._decisionMatrix = {}           # Feature Lambda - List of Entries
                                             # [A.1, A.2, B.1, B.2]
+        self._lambdaID       = {}           # Index - Feature Lambda
         self._lastFeatures   = []           # List of Feature Lambdas
+
+
+    def getJSON(self):
+        outData = {}
+        for idKey, feature in self._lambdaID.items():
+            outData[idKey] = self._decisionMatrix[feature]
+
+        return outData
+
+
+    def putJSON(self, data):
+        for idStr, valStrList in data.items():
+            idKey = Utility.safeCast(idStr, int, -1)
+
+            if idKey in self._lambdaID and len(valStrList) == 4:
+                valList = []
+                for i in range(4):
+                    valList.append(Utility.safeCast(valStrList[i], int, 0))
+                self._decisionMatrix[self._lambdaID[idKey]] = valList
 
 
     def addLambda(self, featureLambda):
         # featureLambda  # Input  : {Capsule, List of Observations}, {Observed Axioms (Capsule), List of Observations}
         #                # Output : Boolean
         self._decisionMatrix[featureLambda] = np.array([0, 0, 0, 0])
+        self._lambdaID[len(self._lambdaID)] = featureLambda
 
 
     def checkResults(self, observations : dict, observedAxioms : dict):
@@ -26,13 +49,13 @@ class MetaLearner:
         maxEntry = np.argmax(totalDecision)
 
         if maxEntry == 0:
-            print("A non-activated parent capsule is missing a route.")
+            return "A non-activated parent capsule is missing a route."
         elif maxEntry == 1:
-            print("A parent capsule is missing.")
+            return "A parent capsule is missing."
         elif maxEntry == 2:
-            print("An attribute is lacking training data.")
+            return "An attribute is lacking training data."
         elif maxEntry == 3:
-            print("An attribute is missing.")
+            return "An attribute is missing."
 
 
     def applyOracle(self, oracleDecision : int):

@@ -79,10 +79,10 @@ class VividNet:
 
     def showFrame(self, filename : str):
         imageReal, self._inputWidth, self._inputHeight = Utility.loadImage(filename) 
-        simObs = self._capsuleNetwork.showInput(imageReal, self._inputWidth, self._inputHeight, 1)
+        simObs, recommendation = self._capsuleNetwork.showInput(imageReal, self._inputWidth, self._inputHeight, 1)
 
         self.applyContinuity(simObs)
-        return simObs
+        return simObs, recommendation
 
     
     def applyContinuity(self, newObservations : dict):

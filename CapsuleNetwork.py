@@ -33,12 +33,16 @@ class CapsuleNetwork:
         self._metaLearner.addLambda(lambda obs, axioms : len(self.findSameParents(list(axioms.keys()))) > 0)
         # 2. Observed Axioms don't have same $\Omega$ as parent
         self._metaLearner.addLambda(lambda obs, axioms : len(self.findSameParents(list(axioms.keys()))) == 0)
-        # 3. Parts tracked from previous scenes
+        # 3. Parts are tracked from previous scenes
         self._metaLearner.addLambda(lambda obs, axioms : \
             Utility.andElements([Utility.andElements([obsItem.hasPreviousObservation() for obsItem in obsList]) for obsList in axioms.values()]))
-        # 4. $\Omega: Z(\vec{\alpha}, \vec{\tilde{\alpha}})$ indicates one attribute mismatch \\ with no entry in memory $\alpha^i >\epsilon$
+        # 4. Parts are NOT tracked from previous scenes
+        self._metaLearner.addLambda(lambda obs, axioms : \
+            not Utility.andElements([Utility.andElements([obsItem.hasPreviousObservation() for obsItem in obsList]) for obsList in axioms.values()]))
+        
+        # 5. $\Omega: Z(\vec{\alpha}, \vec{\tilde{\alpha}})$ indicates one attribute mismatch \\ with no entry in memory $\alpha^i >\epsilon$
         # TODO: self._metaLearner.addLambda(lambda obs, axioms : self.agreementOfMostLikelyParent(axioms))
-        # 5. $\Omega: Z(\vec{\alpha}, \vec{\tilde{\alpha}})$ indicates attribute mismatch \\ for (position, rotation, size) only
+        # 6. $\Omega: Z(\vec{\alpha}, \vec{\tilde{\alpha}})$ indicates attribute mismatch \\ for (position, rotation, size) only
         # TODO:
 
 
@@ -52,7 +56,9 @@ class CapsuleNetwork:
 
             semanticData.append({"semanticCapsules" : layerCaps})
 
-        return {"semanticLayers" : semanticData}
+        metaLearnerData = self._metaLearner.getJSON()
+
+        return {"semanticLayers" : semanticData, "metaLearner" : metaLearnerData}
 
 
     def putJSON(self, data):
@@ -83,6 +89,9 @@ class CapsuleNetwork:
                 if "remainingMemory" in capsData:
                     semCaps[capsName].putJSONMemory(capsData["remainingMemory"], self._attributePool, lambda name : self.getCapsuleByName(name))
         
+        if "metaLearner" in data:
+            self._metaLearner.putJSON(data["metaLearner"])
+
         return semCaps  # List of Semantic Capsules
 
 
@@ -206,6 +215,21 @@ class CapsuleNetwork:
         return currentCapsule
 
 
+    def addSemanticTraining(self, name : str, fromObservations : list, additionalTraining : int = 0):
+        # TODO:
+        return
+
+    
+    def addAttribute(self, name : str, fromObservations : list, additionalTraining : int = 0):
+        # TODO:
+        return
+
+
+    def addAttributeTraining(self, name : str, fromObservations : list, additionalTraining : int = 0):
+        # TODO:
+        return
+
+
     def getLayerIndex(self, capsule : Capsule):
         for layerID in range(self._numSemanticLayers):
             if capsule in self._semanticLayers[layerID]:
@@ -304,14 +328,15 @@ class CapsuleNetwork:
                 capsule.cleanupObservations()
                 allObs[capsule] = capsule.getObservations()
 
+        recommendation = None
         observedAxioms = self.findObservedAxioms(allObs)
         if len(observedAxioms) > 1:
-            self._metaLearner.checkResults(allObs, observedAxioms)
+            recommendation = self._metaLearner.checkResults(allObs, observedAxioms)
 
         passedTime = time.time() - startTime
         print("Total Time Passed: " + str(passedTime) + "s")
 
-        return allObs   # Capsule - List Of Observations
+        return allObs, recommendation   # Capsule - List Of Observations, Recommendation String
 
 
     def applyOracle(self, oracleDecision : int):

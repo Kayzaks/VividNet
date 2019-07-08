@@ -22,7 +22,8 @@ class GraphicsUserInterface:
 
 
     def draw(self, imageReal : list, imageObserved : list, width1 : int, height1 : int, width2 : int, height2 : int, 
-                         semantics : dict, texts : list, lambdaTrain, save : bool = False):
+                         semantics : dict, texts : list, lambdaNewCaps, lambdaTrainCaps, lambdaNewAttr, lambdaTrainAttr, 
+                         save : bool = False, recommendation : str = None):
         # semantics    # Observation - List of Semantics
 
         selectedObs = []
@@ -32,7 +33,7 @@ class GraphicsUserInterface:
             if event.xdata is None or event.ydata is None or event.button is None:
                 # No Interesting Data..
                 return
-            if event.inaxes != axarr[2]:
+            if event.inaxes != axarr[0][2]:
                 # Wrong Axis
                 return
 
@@ -53,11 +54,25 @@ class GraphicsUserInterface:
 
             fig.canvas.draw()
 
-        def runButton(event):        
+        def runButtonA(event):        
             if len(selectedObs) > 0 and len(newName[0]) > 0:
-                lambdaTrain(newName[0], selectedObs)
+                lambdaNewCaps(newName[0], selectedObs)
                 plt.close()
 
+        def runButtonB(event):        
+            if len(selectedObs) > 0 and len(newName[0]) > 0:
+                lambdaTrainCaps(newName[0], selectedObs)
+                plt.close()
+
+        def runButtonC(event):        
+            if len(selectedObs) > 0 and len(newName[0]) > 0:
+                lambdaNewAttr(newName[0], selectedObs)
+                plt.close()
+
+        def runButtonD(event):        
+            if len(selectedObs) > 0 and len(newName[0]) > 0:
+                lambdaTrainAttr(newName[0], selectedObs)
+                plt.close()
 
         def onTextSubmit(text):
             newName[0] = text
@@ -78,42 +93,87 @@ class GraphicsUserInterface:
                 pixels2[(yy * width2 + xx) * 3 + 2] = imageObserved[(yy * width2 + xx) * 4]
 
 
-        fig, axarr = plt.subplots(1,3)
+        fig, axarr = plt.subplots(2,3)
         imageData = numpy.reshape(pixels1, [height1, width1, 3])
-        axarr[0].imshow(imageData)
-        axarr[1].imshow(numpy.reshape(pixels2, [height2, width2, 3]))
-        axarr[2].imshow(numpy.reshape(pixels2, [height2, width2, 3]))
-        axarr[0].set_axis_off()
-        axarr[1].set_axis_off()
-        axarr[2].set_axis_off()
-        axarr[0].set_title("Original")
-        axarr[1].set_title("Internal Represenation")
-        axarr[2].set_title("Semantics")
+        axarr[0][0].imshow(imageData)
+        axarr[0][1].imshow(numpy.reshape(pixels2, [height2, width2, 3]))
+        axarr[0][2].imshow(numpy.reshape(pixels2, [height2, width2, 3]))
+        axarr[0][0].set_axis_off()
+        axarr[0][1].set_axis_off()
+        axarr[0][2].set_axis_off()
+        axarr[0][0].set_title("Original")
+        axarr[0][1].set_title("Internal Represenation")
+        axarr[0][2].set_title("Semantics")
+
+        # Hide lower Row to make room for Meta-learning
+        axarr[1][0].set_axis_off()
+        axarr[1][1].set_axis_off()
+        axarr[1][2].set_axis_off()
 
         for semanticList in semantics.values():
             for semantic in semanticList:
-                axarr[2].add_patch(semantic)
+                axarr[0][2].add_patch(semantic)
 
         for text in texts:
-            axarr[2].text(text[0], text[1], text[2], color = 'y', fontsize=8)
+            axarr[0][2].text(text[0], text[1], text[2], color = 'y', fontsize=8)
 
         if save is True:
             scipy.misc.imsave("scene.png", imageData)
 
-        fig.canvas.mpl_connect('button_press_event', mouseClick)
-        axbtn = plt.axes([0.81, 0.05, 0.1, 0.075])
-        bnext = Button(axbtn, 'Train')
-        bnext.on_clicked(runButton)
 
-        
-        axbox = plt.axes([0.6, 0.15, 0.35, 0.075])
-        textBox = TextBox(axbox, 'Name', initial='')
-        textBox.on_submit(onTextSubmit)
-        
-        axdesc = plt.axes([0.1, 0.05, 0.55, 0.1])
-        axdesc.set_axis_off()
-        axdesc.text(0, 0.0, "Select or Deselect (LMB) Primitives in 'Semantics' Plot \n to be combined into a new Semantic Capsule, enter \n a name and press 'Train'", fontsize=10, wrap=True)
+        if recommendation is not None:
+            # Meta-Learning
 
+            fig.canvas.mpl_connect('button_press_event', mouseClick)
+
+            axdesc = plt.axes([0.03, 0.475, 0.94, 0.1])
+            axdesc.set_axis_off()
+            axdesc.text(0, 0.0, "(Select or Deselect (LMB) Primitives in 'Semantics' Plot to be combined into a new or existing Semantic Capsule \n and then choose one of the four options below, optionally following the recommendation by the Meta-learning agent)", fontsize=7, wrap=True)
+
+            axrec = plt.axes([0.15, 0.4, 0.8, 0.1])
+            axrec.set_axis_off()
+            axrec.text(0, 0.0, "Recommendation: " + recommendation, fontsize=10, wrap=True, bbox=dict(facecolor='red', alpha=0.2))
+
+
+            # New Capsule
+            axboxA = plt.axes([0.3, 0.25, 0.35, 0.075])
+            textBoxA = TextBox(axboxA, 'New Capsule Name', initial='')
+            textBoxA.on_submit(onTextSubmit)
+
+            axbtnA = plt.axes([0.65, 0.25, 0.25, 0.075])
+            bnextA = Button(axbtnA, 'Train New Capsule')
+            bnextA.on_clicked(runButtonA)
+            
+
+            # Existing Capsule
+            axboxB = plt.axes([0.3, 0.175, 0.35, 0.075])
+            textBoxB = TextBox(axboxB, 'Existing Capsule Name', initial='')
+            textBoxB.on_submit(onTextSubmit)
+
+            axbtnB = plt.axes([0.65, 0.175, 0.25, 0.075])
+            bnextB = Button(axbtnB, 'Train Exist. Caps.')
+            bnextB.on_clicked(runButtonB)
+            
+
+            # New Attribute
+            axboxC = plt.axes([0.3, 0.1, 0.35, 0.075])
+            textBoxC = TextBox(axboxC, 'New Attribute Name', initial='')
+            textBoxC.on_submit(onTextSubmit)
+
+            axbtnC = plt.axes([0.65, 0.1, 0.25, 0.075])
+            bnextC = Button(axbtnC, 'Train new Attribute')
+            bnextC.on_clicked(runButtonC)
+            
+
+            # Existing Attribute
+            axboxD = plt.axes([0.3, 0.025, 0.35, 0.075])
+            textBoxD = TextBox(axboxD, 'Existing Attribute Name', initial='')
+            textBoxD.on_submit(onTextSubmit)
+
+            axbtnD = plt.axes([0.65, 0.025, 0.25, 0.075])
+            bnextD = Button(axbtnD, 'Train Exist. Attr.')
+            bnextD.on_clicked(runButtonD)
+            
         plt.show()
     
         

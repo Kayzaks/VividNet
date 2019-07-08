@@ -54,8 +54,8 @@ if __name__ == '__main__':
     primCaps = vividNet.setRenderer(TestRenderer, TestPrimitives, retrainPrimitives)
     vividNet.setSyntheticPhysics(TestPhysics, retrainPhysics)
 
-    simObs = vividNet.showFrame("Examples/Bframe1.0.png")
-    simObs = vividNet.showFrame("Examples/Bframe1.1.png") 
+    simObs, ignoreR = vividNet.showFrame("Examples/Bframe1.0.png")
+    simObs, ignoreR = vividNet.showFrame("Examples/Bframe1.1.png") 
 
     # Print all Observations and their continuity
     for capsule in simObs.keys():
