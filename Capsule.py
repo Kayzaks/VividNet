@@ -134,9 +134,42 @@ class Capsule:
 
         self._routes.append(newRoute)
 
-        self.inheritAttributes(fromCapsules, attributePool)
+        self.inheritAttributes(attributePool)
 
         newRoute.createSemanticRoute(fromObservations)
+
+
+    def trainSemanticRoute(self, fromObservations : list):
+        # TODO: Identify best fitting route according to Attribute Match and Topology
+        #       Currently, this is assumed to be the first route...
+        self._routes[0].addTrainingData(fromObservations, 1.0)
+        self._routes[0].retrain()
+
+
+    def addSemanticAttribute(self, fromObservations : list, attributeName : str, attributePool : AttributePool):
+        newAttr = self.createAttribute(attributeName, attributePool, False)
+        # TODO: Identify best fitting route according to Attribute Match and Topology
+        #       Currently, this is assumed to be the first route...
+        # TODO: Choose a better value than 1, especially for Verbs...
+        
+        self._routes[0].addTrainingData(fromObservations, 1.0, newAttr, 1.0)
+        self._routes[0].resizeInternals()
+
+
+    def trainSemanticAttribute(self, fromObservations : list, attributeName : str):
+        targetAttr = None
+        for attr in self._attributes.values():
+            if attributeName.lower() in attr.getName().lower():
+                targetAttr = attr
+                break
+            
+        if targetAttr is None:
+            return
+
+        # TODO: Choose better Attribute Values and rescaling choice
+        self._routes[0].rescaleAttribute(targetAttr, 0.75)
+        self._routes[0].addTrainingData(fromObservations, 1.0, targetAttr, 1.0)
+        self._routes[0].retrain(fromScratch = True)
 
 
     def haveSameParent(self, capsules : list):
@@ -156,7 +189,7 @@ class Capsule:
         return None
 
 
-    def inheritAttributes(self, fromCapsules : list, attributePool : AttributePool):
+    def inheritAttributes(self, attributePool : AttributePool):
         for route in self._routes:
             for capsule in route.getFromCapsules():
                 for attribute in capsule.getAttributes():
@@ -166,6 +199,7 @@ class Capsule:
 
 
     def createAttribute(self, name : str, attributePool : AttributePool, isInherited : bool = False):
+        # TODO: Attribute Lexical Type
         newAttribute = attributePool.createAttribute(name)
         if newAttribute is not None:
             self._attributes[newAttribute.getName()] = newAttribute

@@ -27,7 +27,8 @@ class GraphicsUserInterface:
         # semantics    # Observation - List of Semantics
 
         selectedObs = []
-        newName = [""]  # Faking Pointers..
+        newNameCaps = [""]  # Faking Pointers..
+        newNameAttr = [""]  # Faking Pointers..
 
         def mouseClick(event):
             if event.xdata is None or event.ydata is None or event.button is None:
@@ -55,27 +56,30 @@ class GraphicsUserInterface:
             fig.canvas.draw()
 
         def runButtonA(event):        
-            if len(selectedObs) > 0 and len(newName[0]) > 0:
-                lambdaNewCaps(newName[0], selectedObs)
+            if len(selectedObs) > 0 and len(newNameCaps[0]) > 0:
+                lambdaNewCaps(newNameCaps[0], selectedObs)
                 plt.close()
 
         def runButtonB(event):        
-            if len(selectedObs) > 0 and len(newName[0]) > 0:
-                lambdaTrainCaps(newName[0], selectedObs)
+            if len(selectedObs) > 0 and len(newNameCaps[0]) > 0:
+                lambdaTrainCaps(newNameCaps[0], selectedObs)
                 plt.close()
 
         def runButtonC(event):        
-            if len(selectedObs) > 0 and len(newName[0]) > 0:
-                lambdaNewAttr(newName[0], selectedObs)
+            if len(selectedObs) > 0 and len(newNameCaps[0]) > 0 and len(newNameAttr[0]) > 0:
+                lambdaNewAttr(newNameCaps[0], newNameAttr[0], selectedObs)
                 plt.close()
 
         def runButtonD(event):        
-            if len(selectedObs) > 0 and len(newName[0]) > 0:
-                lambdaTrainAttr(newName[0], selectedObs)
+            if len(selectedObs) > 0 and len(newNameCaps[0]) > 0 and len(newNameAttr[0]) > 0:
+                lambdaTrainAttr(newNameCaps[0], newNameAttr[0], selectedObs)
                 plt.close()
+            
+        def onTextSubmitCaps(text):
+            newNameCaps[0] = text
 
-        def onTextSubmit(text):
-            newName[0] = text
+        def onTextSubmitAttr(text):
+            newNameAttr[0] = text
 
         pixels1 = [0.0] * (width1 * height1 * 3)
         pixels2 = [0.0] * (width2 * height2 * 3)
@@ -135,42 +139,31 @@ class GraphicsUserInterface:
             axrec.text(0, 0.0, "Recommendation: " + recommendation, fontsize=10, wrap=True, bbox=dict(facecolor='red', alpha=0.2))
 
 
-            # New Capsule
-            axboxA = plt.axes([0.3, 0.25, 0.35, 0.075])
-            textBoxA = TextBox(axboxA, 'New Capsule Name', initial='')
-            textBoxA.on_submit(onTextSubmit)
+            axboxCaps = plt.axes([0.5, 0.25, 0.35, 0.075])
+            textBoxCaps = TextBox(axboxCaps, 'New/Existing Capsule Name (required)', initial='')
+            textBoxCaps.on_submit(onTextSubmitCaps)
 
-            axbtnA = plt.axes([0.65, 0.25, 0.25, 0.075])
+            axboxAttr = plt.axes([0.5, 0.175, 0.35, 0.075])
+            textBoxAttr = TextBox(axboxAttr, 'New/Existing Attribute Name', initial='')
+            textBoxAttr.on_submit(onTextSubmitAttr)
+
+            # New Capsule
+            axbtnA = plt.axes([0.0, 0.025, 0.25, 0.075])
             bnextA = Button(axbtnA, 'Train New Capsule')
             bnextA.on_clicked(runButtonA)
             
-
             # Existing Capsule
-            axboxB = plt.axes([0.3, 0.175, 0.35, 0.075])
-            textBoxB = TextBox(axboxB, 'Existing Capsule Name', initial='')
-            textBoxB.on_submit(onTextSubmit)
-
-            axbtnB = plt.axes([0.65, 0.175, 0.25, 0.075])
+            axbtnB = plt.axes([0.25, 0.025, 0.25, 0.075])
             bnextB = Button(axbtnB, 'Train Exist. Caps.')
             bnextB.on_clicked(runButtonB)
             
-
             # New Attribute
-            axboxC = plt.axes([0.3, 0.1, 0.35, 0.075])
-            textBoxC = TextBox(axboxC, 'New Attribute Name', initial='')
-            textBoxC.on_submit(onTextSubmit)
-
-            axbtnC = plt.axes([0.65, 0.1, 0.25, 0.075])
+            axbtnC = plt.axes([0.5, 0.025, 0.25, 0.075])
             bnextC = Button(axbtnC, 'Train new Attribute')
-            bnextC.on_clicked(runButtonC)
-            
+            bnextC.on_clicked(runButtonC)            
 
             # Existing Attribute
-            axboxD = plt.axes([0.3, 0.025, 0.35, 0.075])
-            textBoxD = TextBox(axboxD, 'Existing Attribute Name', initial='')
-            textBoxD.on_submit(onTextSubmit)
-
-            axbtnD = plt.axes([0.65, 0.025, 0.25, 0.075])
+            axbtnD = plt.axes([0.75, 0.025, 0.25, 0.075])
             bnextD = Button(axbtnD, 'Train Exist. Attr.')
             bnextD.on_clicked(runButtonD)
             

@@ -101,7 +101,7 @@ class CapsuleRoute:
         return self._memory.getMeanProbability()
 
 
-    def observationFromInputs(self, inputObservations : list, forcedProbability : float = 0.0):
+    def observationFromInputs(self, inputObservations : list, forcedProbability : float = 1.0):
         inputs = {}                             # Attribute - List of Values
         for obs in inputObservations:
             newInputs = obs.getOutputs(True)    # Attribute - Value
@@ -114,17 +114,30 @@ class CapsuleRoute:
         outputs = self.runGammaFunction(inputs, False)
 
         # TODO: Use actual probability
-        return Observation(self._parentCapsule, self, inputObservations, outputs, max(forcedProbability, 1.0))
+        return Observation(self._parentCapsule, self, inputObservations, outputs, min(forcedProbability, 1.0))
 
 
 
     def createSemanticRoute(self, initialObservations : list):
         self._isSemanticCapsule = True
 
-        self._memory.addSavedObservations([self.observationFromInputs(initialObservations, 1.0)])
+        self.addTrainingData(initialObservations, 1.0)
         self._memory.setLambdaKnownGamma((lambda attributes : self.runGammaFunction(attributes)))
                 
-        self.resizeInternals()            
+        self.resizeInternals()          
+
+
+    def addTrainingData(self, observations : list, forcedProbability : float = 1.0, appendAttr : Attribute = None, appendValue : float = 0.0):
+        newObs = self.observationFromInputs(observations, forcedProbability)
+
+        if appendAttr is not None:
+            newObs.appendOutputAttribute(appendAttr, appendValue)
+
+        self._memory.addSavedObservations([newObs])
+
+
+    def rescaleAttribute(self, attribute : Attribute, scale : float):
+        self._memory.rescaleAttribute(attribute, scale)
 
 
     def createPrimitiveRoute(self, gInputMapping : dict, gOutputMapping : dict, 
@@ -177,7 +190,14 @@ class CapsuleRoute:
 
 
     def resizeInternals(self):
-        # TODO: Check if anything actually changed
+        prevSizeGamma = 0
+        prevSizeG = 0
+
+        if self._gInputMapping is not None:
+            prevSizeG = len(self._gInputMapping)
+        if self._gammaInputMapping is not None:
+            prevSizeGamma = len(self._gammaInputMapping)
+
         self._gInputMapping         : dict          = dict()  # Attribute - List of Indices (with 1 Element)
         self._gOutputMapping        : dict          = dict()  # Index - Attribute
         self._gammaInputMapping     : dict          = dict()  # Attribute - List of Indices
@@ -196,19 +216,25 @@ class CapsuleRoute:
 
         self._neuralNetG            : NeuralNetG     = NeuralNetG(self._gInputMapping, self._gammaInputMapping, self._name + "-g", True)
 
-        if self._neuralNetG.hasTraining() is True:
-            xx = 0
-            # TODO: Delete Previous Training File
+        hasChanged = False
+        if prevSizeG > 0 and prevSizeGamma > 0 and (prevSizeG != len(self._gInputMapping) or prevSizeGamma != len(self._gammaInputMapping)):
+            hasChanged = True
 
-        # TODO: Only Retrain if changed!
-        if self._neuralNetG.hasTraining() is False:
+        if self._neuralNetG.hasTraining() is True and hasChanged is True:
+            self._neuralNetG.delete()
+
+        if self._neuralNetG.hasTraining() is False or hasChanged is True:
             self.retrain()
 
 
-    def retrain(self, showDebugOutput : bool = True, specificSplit : list = None):
+    def retrain(self, showDebugOutput : bool = True, specificSplit : list = None, fromScratch : bool = False):
         if self._isSemanticCapsule is True:
+            if fromScratch is True and self._neuralNetG.hasTraining() is True:
+                self._neuralNetG.delete()
             self._neuralNetG.trainFromData(self._memory, showDebugOutput, specificSplit)
         else:
+            if fromScratch is True and self._neuralNetGamma.hasTraining() is True:
+                self._neuralNetGamma.delete()
             self._neuralNetGamma.trainFromData(self._memory, showDebugOutput, specificSplit)
 
 

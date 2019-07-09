@@ -96,6 +96,10 @@ class NeuralNet:
                     self._nnModel[index] = keras.models.load_model("Models/" + self._name + "-M" + str(index) + ".h5", custom_objects={'rmse' : rmse})
 
 
+    def delete(self):
+        Path.unlink("Models/" + self._name + "-M" + str(modelIndex) + ".h5")
+
+
     def defineModel(self, inputShape : tuple, outputSize : int):
         return
 

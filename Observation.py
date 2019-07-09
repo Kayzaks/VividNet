@@ -45,7 +45,6 @@ class Observation:
         return obs
 
 
-
     def isParent(self, observation):
         for obs in self._inputObservations:
             if obs == observation:
@@ -97,6 +96,16 @@ class Observation:
                 if attr.getName() == attributeName:
                     return value
         return 0.0
+
+
+    def appendOutputAttribute(self, attribute : Attribute, attributeValue : float):
+        self._outputAttributes[attribute] = attributeValue
+
+
+    def rescaleAttribute(self, attribute : Attribute, scale : float):
+        for attr, val in self._outputAttributes:
+            if attr == attribute:
+                self._outputAttributes[attr] = val * scale
 
     
     def printOutputs(self, includeNonInheritable : bool):

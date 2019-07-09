@@ -48,33 +48,33 @@ if __name__ == '__main__':
     semCaps = vividNet.loadSemantic()
 
     # UI Button Functions for Meta-Learning
-    def addNewSemanticCapsule(name : str, observationList : list):
-        print("Training new Capsule '" + name + "' from:")
+    def addNewSemanticCapsule(nameCaps : str, observationList : list):
+        print("Training new Capsule '" + nameCaps + "' from:")
         for obs in observationList:
             obs.printOutputs(True)
 
-        newCaps = vividNet._capsuleNetwork.addSemanticCapsule(name, observationList)
+        resCaps = vividNet._capsuleNetwork.addSemanticCapsule(nameCaps, observationList)
         
-    def trainExistingSemanticCapsule(name : str, observationList : list):
-        print("Training existing Capsule '" + name + "' from:")
+    def trainExistingSemanticCapsule(nameCaps : str, observationList : list):
+        print("Training existing Capsule '" + nameCaps + "' from:")
         for obs in observationList:
             obs.printOutputs(True)
 
-        vividNet._capsuleNetwork.addSemanticTraining(name, observationList)
+        resCaps = vividNet._capsuleNetwork.addSemanticTraining(nameCaps, observationList)
         
-    def addNewAttribute(name : str, observationList : list):
-        print("Training new Attribute '" + name + "' from:")
+    def addNewAttribute(nameCaps : str, nameAttr : str, observationList : list):
+        print("Training new Attribute '" + nameAttr + "' for '" + nameCaps + "' from:")
         for obs in observationList:
             obs.printOutputs(True)
 
-        vividNet._capsuleNetwork.addAttribute(name, observationList)
+        resCaps = vividNet._capsuleNetwork.addAttribute(nameCaps, nameAttr, observationList)
         
-    def trainExistingAttribute(name : str, observationList : list):
-        print("Training existing Attribute '" + name + "' from:")
+    def trainExistingAttribute(nameCaps : str, nameAttr : str, observationList : list):
+        print("Training existing Attribute '" + nameAttr + "' for '" + nameCaps + "' from:")
         for obs in observationList:
             obs.printOutputs(True)
 
-        vividNet._capsuleNetwork.addAttributeTraining(name, observationList)
+        resCaps = vividNet._capsuleNetwork.addAttributeTraining(nameCaps, nameAttr, observationList)
         
 
     for i in range(3):

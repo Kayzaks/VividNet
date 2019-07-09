@@ -141,6 +141,10 @@ class CapsuleMemory(Memory):
         return False
 
 
+    def rescaleAttribute(self, attribute : Attribute, scale : float):
+        for obs in self._savedObservations:
+            obs.rescaleAttribute(attribute, scale)
+
 
     def transformDataPoint(self, initialObservation : Observation, mainSymmetry : float, symmetries : dict):
         # symmetries   # Capsule    - Symmetry

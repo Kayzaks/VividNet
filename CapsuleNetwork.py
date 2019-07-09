@@ -216,18 +216,42 @@ class CapsuleNetwork:
 
 
     def addSemanticTraining(self, name : str, fromObservations : list, additionalTraining : int = 0):
-        # TODO:
-        return
+        targetCaps = self.findCapsule(name)
+        if targetCaps is None:
+            return None
+
+        targetCaps.trainSemanticRoute(fromObservations)
+        return targetCaps
 
     
-    def addAttribute(self, name : str, fromObservations : list, additionalTraining : int = 0):
-        # TODO:
-        return
+    def addAttribute(self, nameCaps : str, nameAttr : str, fromObservations : list, additionalTraining : int = 0):
+        targetCaps = self.findCapsule(nameCaps)
+        if targetCaps is None:
+            return None
+
+        targetCaps.addSemanticAttribute(fromObservations, nameAttr, self._attributePool)
+
+        for caps in self._semanticCapsules:
+            caps.inheritAttributes(self._attributePool)
+
+        return targetCaps
 
 
-    def addAttributeTraining(self, name : str, fromObservations : list, additionalTraining : int = 0):
-        # TODO:
-        return
+    def addAttributeTraining(self, nameCaps : str, nameAttr : str, fromObservations : list, additionalTraining : int = 0):
+        targetCaps = self.findCapsule(nameCaps)
+        if targetCaps is None:
+            return None
+
+        targetCaps.trainSemanticAttribute(fromObservations, nameAttr)
+        return targetCaps
+
+
+    def findCapsule(self, name : str):
+        for caps in self._semanticCapsules:
+            if name.lower() in caps.getName().lower():
+                return caps
+        
+        return None
 
 
     def getLayerIndex(self, capsule : Capsule):
