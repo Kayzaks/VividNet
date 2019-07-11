@@ -117,6 +117,45 @@ class CapsuleRoute:
         return Observation(self._parentCapsule, self, inputObservations, outputs, min(forcedProbability, 1.0))
 
 
+    def getAttributeDistance(self, fromObservations : list, attribute : Attribute, attributeValue : float):
+        # This is an trivial implementation to find an initial guess for the "distance" between
+        # Attributes, without knowledge of the geometry of the configuration space.
+        # For a more accurate estimate, a bayesian approach should be chosen to incorporate 
+        # gained knowledge of the geometry.
+        # TODO: This is highly unoptimized...
+        newObs = self.observationFromInputs(fromObservations, 1.0)
+        targetAttr = newObs.getOutputsList()
+        targetAttr[attribute] = [0.0]
+
+        zeroPoint = self.runGFunction(targetAttr, isTraining = False)
+        
+        targetAttr[attribute] = [attributeValue]
+
+        offPoint = self.runGFunction(targetAttr, isTraining = False)
+
+        totalLen = 0.0
+        for i in range(len(zeroPoint)):
+            totalLen += (offPoint[i] - zeroPoint[i]) * (offPoint[i] - zeroPoint[i])
+
+        return totalLen / float(len(zeroPoint))
+
+
+    def getAttributeDistanceRaw(self, fromObservations : list, attribute : Attribute):
+        # See self.getAttributeDistance()
+        newObs = self.observationFromInputs(fromObservations, 1.0)
+        targetAttr = newObs.getOutputsList()
+        targetAttr[attribute] = [0.0]
+
+        zeroPoint = self.runGFunction(targetAttr, isTraining = False)
+        
+        offPoint = Utility.mapDataOneWayDictRevList(newObs.getInputs(), self._gammaInputMapping)
+
+        totalLen = 0.0
+        for i in range(len(zeroPoint)):
+            totalLen += (offPoint[i] - zeroPoint[i]) * (offPoint[i] - zeroPoint[i])
+
+        return totalLen / float(len(zeroPoint))
+
 
     def createSemanticRoute(self, initialObservations : list):
         self._isSemanticCapsule = True

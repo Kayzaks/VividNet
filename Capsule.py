@@ -166,9 +166,18 @@ class Capsule:
         if targetAttr is None:
             return
 
-        # TODO: Choose better Attribute Values and rescaling choice
-        self._routes[0].rescaleAttribute(targetAttr, 0.75)
-        self._routes[0].addTrainingData(fromObservations, 1.0, targetAttr, 1.0)
+        # TODO: Choose the correct route
+        newDist = self._routes[0].getAttributeDistanceRaw(fromObservations, targetAttr)
+        oldMaxDist = self._routes[0].getAttributeDistance(fromObservations, targetAttr, 1.0)
+
+        if newDist > oldMaxDist:
+            # New Point is the new Max -> Rescale
+            self._routes[0].rescaleAttribute(targetAttr, oldMaxDist / newDist)
+            self._routes[0].addTrainingData(fromObservations, 1.0, targetAttr, 1.0)
+        else:
+            # New Point is intermediary
+            self._routes[0].addTrainingData(fromObservations, 1.0, targetAttr, newDist / oldMaxDist)
+
         self._routes[0].retrain(fromScratch = True)
 
 
