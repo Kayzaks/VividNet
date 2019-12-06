@@ -139,5 +139,5 @@ class VividNet:
 
             observationFrame = self._intuitivePhysics.predict(observationFrame, [0.5, 0.5, 0.5])
 
-        return framesPixels
+        return framesPixels, observationFrame
 

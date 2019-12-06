@@ -2,9 +2,9 @@
 # ------------------------------------------------------------------
 #
 # Note1: This is highly un-optimized. It may take several minutes to 
-#        process a single image. The constant context switching 
-#        between rendering and neural networks seems to be the main
-#        culprit.
+#        process a small image. We split the detection of Figure 5
+#        into multiple parts for this reason, however, this has no
+#        effect on the algorithm itself.
 #
 # Note2: Due to size constraints, we had to omit the trained models
 #        for the primitive capsules. Running this file will automatically
@@ -54,6 +54,7 @@ if __name__ == '__main__':
             obs.printOutputs(True)
 
         resCaps = vividNet._capsuleNetwork.addSemanticCapsule(nameCaps, observationList)
+        vividNet.saveSemantic()
         
     def trainExistingSemanticCapsule(nameCaps : str, observationList : list):
         print("Training existing Capsule '" + nameCaps + "' from:")
@@ -61,6 +62,7 @@ if __name__ == '__main__':
             obs.printOutputs(True)
 
         resCaps = vividNet._capsuleNetwork.addSemanticTraining(nameCaps, observationList)
+        vividNet.saveSemantic()
         
     def addNewAttribute(nameCaps : str, nameAttr : str, observationList : list):
         print("Training new Attribute '" + nameAttr + "' for '" + nameCaps + "' from:")
@@ -68,6 +70,7 @@ if __name__ == '__main__':
             obs.printOutputs(True)
 
         resCaps = vividNet._capsuleNetwork.addAttribute(nameCaps, nameAttr, observationList)
+        vividNet.saveSemantic()
         
     def trainExistingAttribute(nameCaps : str, nameAttr : str, observationList : list):
         print("Training existing Attribute '" + nameAttr + "' for '" + nameCaps + "' from:")
@@ -75,6 +78,7 @@ if __name__ == '__main__':
             obs.printOutputs(True)
 
         resCaps = vividNet._capsuleNetwork.addAttributeTraining(nameCaps, nameAttr, observationList)
+        vividNet.saveSemantic()
         
 
     for i in range(3):

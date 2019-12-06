@@ -169,6 +169,65 @@ class GraphicsUserInterface:
             
         plt.show()
     
+
+    def drawGame(self, imageObserved : list, width : int, height : int, 
+                        lambdaMove, saveId : int = -1):
+
+        def runButtonLeft(event):        
+            lambdaMove((-1.0, 0.0))
+            plt.close()
+
+        def runButtonUp(event):
+            lambdaMove((0.0, 1.0))
+            plt.close()
+
+        def runButtonRight(event):
+            lambdaMove((1.0, 0.0))
+            plt.close()
+
+        def runButtonDown(event): 
+            lambdaMove((0.0, -1.0))
+            plt.close()
+            
+        pixels = [0.0] * (width * height * 3)
+        
+        for yy in range(height):
+            for xx in range(width):
+                pixels[(yy * width + xx) * 3] = imageObserved[(yy * width + xx) * 4]
+                pixels[(yy * width + xx) * 3 + 1] = imageObserved[(yy * width + xx) * 4]
+                pixels[(yy * width + xx) * 3 + 2] = imageObserved[(yy * width + xx) * 4]
+
+
+        fig, axarr = plt.subplots(2,1)
+        imageData = numpy.reshape(pixels, [height, width, 3])
+        axarr[0].imshow(imageData)
+        axarr[0].set_axis_off()
+        axarr[0].set_title("Frame")
+
+        # Hide lower Row to make room for Meta-learning
+        axarr[1].set_axis_off()
+
+        if saveId >= 0:
+            scipy.misc.imsave("scene" + str(saveId) + ".png", imageData)
+
+        # Arrow Keys
+        axbtnUp = plt.axes([0.375, 0.3, 0.25, 0.075])
+        bnextUp = Button(axbtnUp, 'Up')
+        bnextUp.on_clicked(runButtonUp)
+        
+        axbtnLeft = plt.axes([0.1, 0.2, 0.25, 0.075])
+        bnextLeft = Button(axbtnLeft, 'Left')
+        bnextLeft.on_clicked(runButtonLeft)
+        
+        axbtnRight = plt.axes([0.65, 0.2, 0.25, 0.075])
+        bnextRight = Button(axbtnRight, 'Right')
+        bnextRight.on_clicked(runButtonRight)            
+
+        axbtnDown = plt.axes([0.375, 0.1, 0.25, 0.075])
+        bnextDown = Button(axbtnDown, 'Down')
+        bnextDown.on_clicked(runButtonDown)
+            
+        plt.show()
         
 
     def drawMovie(self, frames : list, width : int, height : int, deltaT : float, save : bool):

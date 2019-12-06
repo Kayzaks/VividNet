@@ -37,23 +37,23 @@ if __name__ == '__main__':
     testUI = GraphicsUserInterface()
 
     vividNet = VividNet("vividnetC")
-
     primCaps = vividNet.setRenderer(TestRenderer, TestPrimitives, 0) # , 2)
 
     # We train the Physics on Synthetic Data  
-    vividNet.setSyntheticPhysics(TestPhysics) 
+    vividNet.setSyntheticPhysics(TestPhysics, 0) 
 
-    circleCapsule = primCaps[TestPrimitives.Circle]
-    
+    for i in range(10):
+        vividNet._intuitivePhysics._physicsMemory._syntheticPhysics.generateInteractionSequence(vividNet._capsuleNetwork, 84, 84, "Tests/TSET/", str(i))
+
+    exit()
+
     semCaps = vividNet.loadSemantic()
     print(semCaps)
 
-    exit()
-    #vividNet._intuitivePhysics.trainPhiR(True) # 3 Times
-    #vividNet._intuitivePhysics.trainPhiO(True)   # 2 Times ok
+    exit() 
 
-    simObs = vividNet.showFrame("Examples/Bframe0.0.png")
-    simObs = vividNet.showFrame("Examples/Bframe0.1.png") 
+    simObs, ignoreR = vividNet.showFrame("Examples/Bframe0.0.png")
+    simObs, ignoreR = vividNet.showFrame("Examples/Bframe0.1.png") 
 
     # Print all Observations
     for capsule in simObs.keys():

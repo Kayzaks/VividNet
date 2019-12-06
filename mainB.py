@@ -45,7 +45,7 @@ HyperParameters.SemanticProbabilityCutOff  = 0.85
 if __name__ == '__main__':
     testUI = GraphicsUserInterface()
 
-    vividNet = VividNet()
+    vividNet = VividNet("vividnetB")
 
     retrainPrimitives = 2       # After initial Training, add 2 more loops, set this to 0 
                                 # after completion.

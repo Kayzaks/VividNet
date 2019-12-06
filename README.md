@@ -26,4 +26,5 @@ To run the examples, clone the repo and run either:
 | *mainA.py* | Example of detecting a space-ship |
 | *mainB.py* | Example of Intuitive Physics with 3 circles |
 | *mainC.py* | Example of Intuitive Physics *(unfinished)*|
+| *mainD.py* | Example of Querying (Game Engine) *(unfinished)*|
 
