@@ -49,9 +49,10 @@ if __name__ == '__main__':
 
     retrainPrimitives = 0       # After initial Training, add 2 more loops, set this to 0 
                                 # after completion.
-    retrainPhysics = 1          # After initial Training, add 1 more loop, set this to 0 
+    retrainPhysics = 0          # After initial Training, add 1 more loop, set this to 0 
                                 # after completion.
     primCaps = vividNet.setRenderer(TestRenderer, TestPrimitives, retrainPrimitives)
+    semCaps = vividNet.loadSemantic()
     vividNet.setSyntheticPhysics(TestPhysics, retrainPhysics)
 
     # gameObservations, ignoreR = vividNet.showFrame("Examples/Dframe0.0.png")
@@ -63,10 +64,16 @@ if __name__ == '__main__':
     height = 84
 
     circleCapsule = vividNet._capsuleNetwork._primitiveCapsules[0]
-    triangleCapsule = vividNet._capsuleNetwork._primitiveCapsules[2]
+    playerCapsule = vividNet._capsuleNetwork._semanticCapsules[0]  #vividNet._capsuleNetwork._primitiveCapsules[2]
 
     circObs = []
-    triObs = []
+    playerObs = []
+
+    # Starting Point
+    playerSize = 0.2  # 0.14
+    playerRotation = 0.1
+    #playerSize = 0.2  # 0.14
+    #playerRotation = 0.25
 
     circObs.append(Observation(circleCapsule, circleCapsule._routes[0], [], 
                 { circleCapsule.getAttributeByName("Position-X") : 0.1,
@@ -96,21 +103,21 @@ if __name__ == '__main__':
                     circleCapsule.getAttributeByName("Strength") : 0.07 }, 1.0 ))
 
                     
-    triObs.append(Observation(triangleCapsule, triangleCapsule._routes[0], [], 
-                { triangleCapsule.getAttributeByName("Position-X") : 0.5,
-                    triangleCapsule.getAttributeByName("Position-Y") : 0.5,
-                    triangleCapsule.getAttributeByName("Size") : 0.13999999999999999,
-                    triangleCapsule.getAttributeByName("Rotation") : 0.125,
-                    triangleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
-                    triangleCapsule.getAttributeByName("Intensity") : 0.8,
-                    triangleCapsule.getAttributeByName("Strength") : 0.15 }, 1.0 ))
+    playerObs.append(Observation(playerCapsule, playerCapsule._routes[0], [], 
+                { playerCapsule.getAttributeByName("Position-X") : 0.5,
+                    playerCapsule.getAttributeByName("Position-Y") : 0.5,
+                    playerCapsule.getAttributeByName("Size") : playerSize,
+                    playerCapsule.getAttributeByName("Rotation") : playerRotation,
+                    playerCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
+                    playerCapsule.getAttributeByName("Intensity") : 0.8,
+                    playerCapsule.getAttributeByName("Strength") : 0.15 }, 1.0 ))
 
-    gameObservations = {circleCapsule : circObs, triangleCapsule : triObs}
+    gameObservations = {circleCapsule : circObs, playerCapsule : playerObs}
     vividNet.applyContinuity(gameObservations)
 
     
     circObs = []
-    triObs = []
+    playerObs = []
 
     circObs.append(Observation(circleCapsule, circleCapsule._routes[0], [], 
                 { circleCapsule.getAttributeByName("Position-X") : 0.1,
@@ -140,33 +147,39 @@ if __name__ == '__main__':
                     circleCapsule.getAttributeByName("Strength") : 0.07 }, 1.0 ))
 
                     
-    triObs.append(Observation(triangleCapsule, triangleCapsule._routes[0], [], 
-                { triangleCapsule.getAttributeByName("Position-X") : 0.5,
-                    triangleCapsule.getAttributeByName("Position-Y") : 0.5,
-                    triangleCapsule.getAttributeByName("Size") : 0.13999999999999999,
-                    triangleCapsule.getAttributeByName("Rotation") : 0.125,
-                    triangleCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
-                    triangleCapsule.getAttributeByName("Intensity") : 0.8,
-                    triangleCapsule.getAttributeByName("Strength") : 0.15 }, 1.0 ))
+    playerObs.append(Observation(playerCapsule, playerCapsule._routes[0], [], 
+                { playerCapsule.getAttributeByName("Position-X") : 0.5,
+                    playerCapsule.getAttributeByName("Position-Y") : 0.5,
+                    playerCapsule.getAttributeByName("Size") : playerSize,
+                    playerCapsule.getAttributeByName("Rotation") : playerRotation,
+                    playerCapsule.getAttributeByName("Aspect-Ratio") : 1.0,
+                    playerCapsule.getAttributeByName("Intensity") : 0.8,
+                    playerCapsule.getAttributeByName("Strength") : 0.15 }, 1.0 ))
 
-    gameObservations = {circleCapsule : circObs, triangleCapsule : triObs}
+    gameObservations = {circleCapsule : circObs, playerCapsule : playerObs}
 
     vividNet._inputWidth = width
     vividNet._inputHeight = height
    
-    xAttr = triangleCapsule.getAttributeByName("Position-X")
-    yAttr = triangleCapsule.getAttributeByName("Position-Y")
-    rAttr = triangleCapsule.getAttributeByName("Rotation")
+    xAttr = playerCapsule.getAttributeByName("Position-X")
+    yAttr = playerCapsule.getAttributeByName("Position-Y")
+    rAttr = playerCapsule.getAttributeByName("Rotation")
+
+    lastDir = (0.0, 0.0)
 
     def dirArrow(direction):
         print(direction)
-        xPos = gameObservations[triangleCapsule][0].getOutput(xAttr)
-        yPos = gameObservations[triangleCapsule][0].getOutput(yAttr)
-        rot = gameObservations[triangleCapsule][0].getOutput(rAttr)
+        xPos = gameObservations[playerCapsule][0].getOutput(xAttr)
+        yPos = gameObservations[playerCapsule][0].getOutput(yAttr)
+        rot = gameObservations[playerCapsule][0].getOutput(rAttr)
 
-        gameObservations[triangleCapsule][0].setOutput(xAttr, xPos + direction[0] * 0.1)
-        gameObservations[triangleCapsule][0].setOutput(yAttr, yPos + direction[1] * 0.1 )
-        #gameObservations[triangleCapsule][0].setOutput(rAttr, )
+        #gameObservations[playerCapsule][0].setOutput(xAttr, xPos + direction[0] * 0.02)
+        #gameObservations[playerCapsule][0].setOutput(yAttr, yPos - direction[1] * 0.02 )
+
+        #if direction[0] > 0.0:
+        #    gameObservations[playerCapsule][0].setOutput(rAttr, rot + 0.02)
+        #elif direction[0] < 0.0:            
+        #    gameObservations[playerCapsule][0].setOutput(rAttr, rot - 0.02)
         
     while gameRunning is True:
 
