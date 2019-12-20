@@ -62,6 +62,8 @@ if __name__ == '__main__':
 
     width = 84
     height = 84
+    vividNet._inputWidth = width
+    vividNet._inputHeight = height
 
     circleCapsule = vividNet._capsuleNetwork._primitiveCapsules[0]
     playerCapsule = vividNet._capsuleNetwork._semanticCapsules[0]  #vividNet._capsuleNetwork._primitiveCapsules[2]
@@ -115,6 +117,9 @@ if __name__ == '__main__':
     gameObservations = {circleCapsule : circObs, playerCapsule : playerObs}
     vividNet.applyContinuity(gameObservations)
 
+
+    currentFrame, gameObservations = vividNet.renderPrediction(1)
+    testUI.drawGame(currentFrame[0], width, height, lambda x: 0, 0)
     
     circObs = []
     playerObs = []
@@ -158,8 +163,10 @@ if __name__ == '__main__':
 
     gameObservations = {circleCapsule : circObs, playerCapsule : playerObs}
 
-    vividNet._inputWidth = width
-    vividNet._inputHeight = height
+    vividNet.applyContinuity(gameObservations)
+    currentFrame, gameObservations = vividNet.renderPrediction(1)
+    testUI.drawGame(currentFrame[0], width, height, lambda x: 0, 1)
+    exit()
    
     xAttr = playerCapsule.getAttributeByName("Position-X")
     yAttr = playerCapsule.getAttributeByName("Position-Y")
@@ -173,13 +180,13 @@ if __name__ == '__main__':
         yPos = gameObservations[playerCapsule][0].getOutput(yAttr)
         rot = gameObservations[playerCapsule][0].getOutput(rAttr)
 
-        #gameObservations[playerCapsule][0].setOutput(xAttr, xPos + direction[0] * 0.02)
-        #gameObservations[playerCapsule][0].setOutput(yAttr, yPos - direction[1] * 0.02 )
+        gameObservations[playerCapsule][0].setOutput(xAttr, xPos + direction[0] * 0.02)
+        gameObservations[playerCapsule][0].setOutput(yAttr, yPos - direction[1] * 0.02 )
 
-        #if direction[0] > 0.0:
-        #    gameObservations[playerCapsule][0].setOutput(rAttr, rot + 0.02)
-        #elif direction[0] < 0.0:            
-        #    gameObservations[playerCapsule][0].setOutput(rAttr, rot - 0.02)
+        if direction[0] > 0.0:
+            gameObservations[playerCapsule][0].setOutput(rAttr, rot + 0.02)
+        elif direction[0] < 0.0:            
+            gameObservations[playerCapsule][0].setOutput(rAttr, rot - 0.02)
         
     while gameRunning is True:
 
